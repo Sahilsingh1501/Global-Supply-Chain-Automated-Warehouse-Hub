@@ -1,4 +1,16 @@
-# Compiled binaries and object files
+# Ignore all root-level project files and folders by default
+/*
+!.gitignore
+!README.md
+!/VER1
+
+# Rules for VER1: track code, data, and docs only
+/VER1/**
+!/VER1/**.cpp
+!/VER1/**.txt
+!/VER1/**.md
+
+# Ignore binaries and editor artifacts
 *.exe
 *.o
 *.obj
@@ -6,9 +18,5 @@
 *.so
 *.out
 *.app
-
-# IDE / Editor artifacts
 .vscode/
 .idea/
-*.swp
-*~
