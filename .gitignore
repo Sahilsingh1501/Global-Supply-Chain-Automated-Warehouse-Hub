@@ -1,0 +1,14 @@
+# Compiled binaries and object files
+*.exe
+*.o
+*.obj
+*.dll
+*.so
+*.out
+*.app
+
+# IDE / Editor artifacts
+.vscode/
+.idea/
+*.swp
+*~
