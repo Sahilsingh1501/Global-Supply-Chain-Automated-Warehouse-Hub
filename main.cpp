@@ -1,367 +1,275 @@
 #include <iostream>
-#include <fstream>
+#include <limits>
+#include <sstream>
 #include <string>
 using namespace std;
-class Entity {
-protected:
+class Product {
+private:
     int id;
     string name;
+    double price;
+    int quantity;
 public:
-    Entity() : id(0), name("") {}
-    Entity(int i, const string& n) : id(i), name(n) {}
+    Product() : id(0), price(0), quantity(0) {}
+    Product(int productId, const string& productName, double productPrice, int stock)
+        : id(productId), name(productName), price(productPrice), quantity(stock) {}
     int getId() const { return id; }
     const string& getName() const { return name; }
-    virtual void display() const {
-        cout << "ID: " << id << " | Name: " << name << endl;
-    }
-    virtual ~Entity() = default;
-};
-class Product : public Entity {
-private:
-    float price;
-    int quantity;
-    int supplierId;
-public:
-    Product() : Entity(), price(0), quantity(0), supplierId(0) {}
-    Product(int i, const string& n, float p, int q, int sId)
-        : Entity(i, n), price(p), quantity(q), supplierId(sId) {}
-
-    float getPrice() const { return price; }
+    double getPrice() const { return price; }
     int getQuantity() const { return quantity; }
-    int getSupplierId() const { return supplierId; }
-    void setQuantity(int q) { quantity = q; }
+    void setQuantity(int stock) { quantity = stock; }
 
-    void display() const override {
-        cout << "Product ID: " << id
-             << " | Name: " << name
-             << " | Price: $" << price
-             << " | Stock: " << quantity
-             << " | Supplier ID: " << supplierId << endl;
-    }
+    friend istream& operator>>(istream& input, Product& product);
+    friend ostream& operator<<(ostream& output, const Product& product);
 };
-class Supplier : public Entity {
+istream& operator>>(istream& input, Product& product) {
+    string line;
+    if (!getline(input >> ws, line)) {
+        return input;
+    }
+  stringstream fields(line);
+    string idText;
+    string name;
+    string priceText;
+    string quantityText;
+    string extra;
+    if (!getline(fields, idText, '|') ||
+        !getline(fields, name, '|') ||
+        !getline(fields, priceText, '|') ||
+        !getline(fields, quantityText, '|') ||
+        getline(fields, extra) ||
+        name.empty()) {
+        input.setstate(ios::failbit);
+        return input;
+    }
+    stringstream idInput(idText);
+    stringstream priceInput(priceText);
+    stringstream quantityInput(quantityText);
+    int idValue;
+    double priceValue;
+    int quantityValue;
+    char trailing;
+    if (!(idInput >> idValue) || (idInput >> trailing) ||
+        !(priceInput >> priceValue) || (priceInput >> trailing) ||
+        !(quantityInput >> quantityValue) || (quantityInput >> trailing) ||
+        idValue <= 0 || priceValue < 0 || quantityValue < 0) {
+        input.setstate(ios::failbit);
+        return input;
+    }
+    product = Product(idValue, name, priceValue, quantityValue);
+    return input;
+}
+ostream& operator<<(ostream& output, const Product& product) {
+    output << "ID: " << product.id
+           << " | Name: " << product.name
+           << " | Price: $" << product.price
+           << " | Stock: " << product.quantity;
+    return output;
+}
+struct ProductNode {
+    Product product;
+    ProductNode* next;
+
+    explicit ProductNode(const Product& value) : product(value), next(nullptr) {}
+};
+class InventoryManager {
 private:
-    string contact;
-public:
-    Supplier() : Entity(), contact("") {}
-    Supplier(int i, const string& n, const string& c)
-        : Entity(i, n), contact(c) {}
-    const string& getContact() const { return contact; }
-    void display() const override {
-        cout << "Supplier ID: " << id
-             << " | Name: " << name
-             << " | Contact: " << contact << endl;
-    }
-};
-struct Node {
-    Product data;
-    Node* next;
-};
-class SupplyChain {
-private:
-    Node* head;
-    Supplier suppliers[20];
-    int supplierCount;
-    Node* findProductById(int id) const {
-        for (Node* node = head; node; node = node->next)
-            if (node->data.getId() == id) return node;
-        return nullptr;
-    }
-    Node* findProductByName(const string& name) const {
-        for (Node* node = head; node; node = node->next)
-            if (node->data.getName() == name) return node;
-        return nullptr;
-    }
-    Supplier* findSupplierById(int id) {
-        for (int i = 0; i < supplierCount; ++i)
-            if (suppliers[i].getId() == id) return &suppliers[i];
-        return nullptr;
-    }
-    void appendProduct(const Product& product) {
-        Node* node = new Node{product, nullptr};
-        if (!head) {
-            head = node;
-            return;
-        }
-        Node* last = head;
-        while (last->next) last = last->next;
-        last->next = node;
+    static const int TABLE_SIZE = 101;
+    ProductNode* buckets[TABLE_SIZE];
+    int getBucket(int id) const {
+        return id % TABLE_SIZE;
     }
 public:
-    SupplyChain() : head(nullptr), supplierCount(0) { loadData(); }
-    ~SupplyChain() { clearListMemory(); }
-    void clearListMemory() {
-        while (head) {
-            Node* next = head->next;
-            delete head;
-            head = next;
+    InventoryManager() {
+        for (int i = 0; i < TABLE_SIZE; ++i) {
+            buckets[i] = nullptr;
         }
     }
-    void addProduct() {
-        int id, qty, suppId;
-        string name;
-        float price;
-        cout << "Enter Product Name: ";
-        cin.ignore();
-        getline(cin, name);
-        Node* existingNode = findProductByName(name);
-        if (existingNode) {
-            cout << "\n[!] This product already exists in inventory!\n";
-            cout << "Details: Product ID " << existingNode->data.getId() 
-                 << " | Current Stock: " << existingNode->data.getQuantity() << endl;
-            cout << "Operation cancelled. Use Option 5 to update stock instead.\n";
-            return;
-        }
-        cout << "Enter Product ID: ";
-        cin >> id;
-        if (findProductById(id)) {
-            cout << "\n[!] Product with ID " << id << " already exists!\n";
-            cout << "Operation cancelled. Please use a unique Product ID.\n";
-            return;
-        }
-        cout << "Enter Price: ";
-        cin >> price;
-        cout << "Enter Initial Stock Quantity: ";
-        cin >> qty;
-        cout << "Enter Supplier ID for this product: ";
-        cin >> suppId;
-        if (!findSupplierById(suppId)) {
-            cout << "[Note] Supplier ID " << suppId
-                 << " is not yet registered. Add it using Option 6.\n";
-        }
-        appendProduct(Product(id, name, price, qty, suppId));
-        saveData();
-        cout << "=> Product added successfully!\n";
-    }
-    void displayAll() {
-        if (!head) {
-            cout << "No products in inventory (Linked List is empty).\n";
-            return;
-        }
-        cout << "\n--- Current Inventory (Linked List) ---\n";
-        for (Node* node = head; node; node = node->next)
-            node->data.display();
-    }
-    void searchProduct() {
-        if (!head) {
-            cout << "Inventory is empty.\n";
-            return;
-        }
-        int id;
-        cout << "Enter Product ID to search: ";
-        cin >> id;
-        Node* product = findProductById(id);
-        if (!product) {
-            cout << "Product ID not found.\n";
-            return;
-        }
-        cout << "\n--- PRODUCT DETAILS ---\n";
-        product->data.display();
-        Supplier* supplier = findSupplierById(product->data.getSupplierId());
-        if (supplier) {
-            cout << "--- SUPPLIER DETAILS ---\n";
-            supplier->display();
-        } else {
-            cout << "Supplier details not found for Supplier ID: "
-                 << product->data.getSupplierId() << endl;
+    ~InventoryManager() {
+        for (int i = 0; i < TABLE_SIZE; ++i) {
+            while (buckets[i]) {
+                ProductNode* next = buckets[i]->next;
+                delete buckets[i];
+                buckets[i] = next;
+            }
         }
     }
-    void updateStock() {
-        if (!head) {
-            cout << "Inventory is empty.\n";
-            return;
+    InventoryManager(const InventoryManager&) = delete;
+    InventoryManager& operator=(const InventoryManager&) = delete;
+    bool addProduct(const Product& product) {
+        const int bucket = getBucket(product.getId());
+        for (ProductNode* current = buckets[bucket]; current; current = current->next) {
+            if (current->product.getId() == product.getId()) {
+                return false;
+            }
         }
-        int id, quantity;
-        cout << "Enter Product ID to update stock: ";
-        cin >> id;
-        Node* product = findProductById(id);
-        if (!product) {
-            cout << "Product ID not found.\n";
-            return;
-        }
-        cout << "Current Stock: " << product->data.getQuantity() << endl;
-        cout << "Enter Quantity to ADD to existing stock: ";
-        cin >> quantity;
-        product->data.setQuantity(product->data.getQuantity() + quantity);
-        saveData();
-        cout << "Stock updated successfully! New Total Stock: "
-             << product->data.getQuantity() << endl;
+        ProductNode* node = new ProductNode(product);
+        node->next = buckets[bucket];
+        buckets[bucket] = node;
+        return true;
     }
-    void deleteProduct() {
-        if (!head) {
-            cout << "Inventory is empty.\n";
-            return;
+    Product* searchProduct(int id) {
+        if (id <= 0) {
+            return nullptr;
         }
-        int id;
-        cout << "Enter Product ID to delete: ";
-        cin >> id;
-        Node* current = head;
-        Node* previous = nullptr;
-        while (current && current->data.getId() != id) {
+        for (ProductNode* current = buckets[getBucket(id)]; current; current = current->next) {
+            if (current->product.getId() == id) {
+                return &current->product;
+            }
+        }
+        return nullptr;
+    }
+    bool deleteProduct(int id) {
+        if (id <= 0) {
+            return false;
+        }
+        ProductNode*& bucketHead = buckets[getBucket(id)];
+        ProductNode* current = bucketHead;
+        ProductNode* previous = nullptr;
+        while (current && current->product.getId() != id) {
             previous = current;
             current = current->next;
         }
         if (!current) {
-            cout << "Product ID not found.\n";
-            return;
+            return false;
         }
-        if (previous) previous->next = current->next;
-        else head = current->next;
+        if (previous) {
+            previous->next = current->next;
+        } else {
+            bucketHead = current->next;
+        }
         delete current;
-        saveData();
-        cout << "Product deleted successfully!\n";
+        return true;
     }
-    void addSupplier() {
-        if (supplierCount >= 20) {
-            cout << "Supplier limit reached!\n";
-            return;
+    void displayProducts() const {
+        bool found = false;
+        cout << "\n--- Product Inventory (Hash Table) ---\n";
+        for (int i = 0; i < TABLE_SIZE; ++i) {
+            for (ProductNode* current = buckets[i]; current; current = current->next) {
+                cout << current->product << '\n';
+                found = true;
+            }
         }
-        int id;
-        string name, contact;
-        cout << "Enter Supplier ID: ";
-        cin >> id;
-        if (findSupplierById(id)) {
-            cout << "\n[!] Supplier with ID " << id << " already exists!\n";
-            return;
-        }
-        cout << "Enter Supplier Name: ";
-        cin.ignore();
-        getline(cin, name);
-        cout << "Enter Contact Email/Phone: ";
-        getline(cin, contact);
-        suppliers[supplierCount++] = Supplier(id, name, contact);
-        saveData();
-        cout << "Supplier added successfully!\n";
-    }
-    void displaySuppliers() {
-        if (supplierCount == 0) {
-            cout << "No suppliers registered.\n";
-            return;
-        }
-        cout << "\n--- Registered Suppliers ---\n";
-        for (int i = 0; i < supplierCount; ++i) suppliers[i].display();
-    }
-    void saveData() {
-        int count = 0;
-        for (Node* node = head; node; node = node->next) ++count;
-        ofstream outFile("inventory.txt");
-        if (!outFile) {
-            cerr << "Error: Could not save inventory.txt.\n";
-            return;
-        }
-        outFile << "TOTAL_RECORDS: " << count << '\n'
-                << "========================================================\n";
-        for (Node* node = head; node; node = node->next) {
-            outFile << "ID: " << node->data.getId() << '\n'
-                    << "Name: " << node->data.getName() << '\n'
-                    << "Price: " << node->data.getPrice() << '\n'
-                    << "Quantity: " << node->data.getQuantity() << '\n'
-                    << "SupplierID: " << node->data.getSupplierId() << '\n'
-                    << "--------------------------------------------------------\n";
-        }
-        ofstream suppFile("suppliers.txt");
-        if (!suppFile) {
-            cerr << "Error: Could not save suppliers.txt.\n";
-            return;
-        }
-        suppFile << "TOTAL_SUPPLIERS: " << supplierCount << '\n'
-                 << "========================================================\n";
-        for (int i = 0; i < supplierCount; ++i) {
-            suppFile << "ID: " << suppliers[i].getId() << '\n'
-                     << "Name: " << suppliers[i].getName() << '\n'
-                     << "Contact: " << suppliers[i].getContact() << '\n'
-                     << "--------------------------------------------------------\n";
+        if (!found) {
+            cout << "Inventory is empty.\n";
         }
     }
-    void loadData() {
-        clearListMemory();
-        supplierCount = 0;
-        ifstream inFile("inventory.txt");
-        if (inFile) {
-            string label, border, prefix, name;
-            int count;
-            if (inFile >> label >> count) {
-                inFile.ignore();
-                getline(inFile, border);
-                for (int i = 0; i < count; ++i) {
-                    int id, quantity, supplierId;
-                    float price;
-                    if (!(inFile >> prefix >> id >> prefix)) break;
-                    inFile.ignore();
-                    if (!getline(inFile, name) ||
-                        !(inFile >> prefix >> price >> prefix >> quantity
-                                 >> prefix >> supplierId >> prefix))
-                        break;
-                    appendProduct(Product(id, name, price, quantity, supplierId));
+    void displayLowStock(int threshold) const {
+        bool found = false;
+        cout << "\n--- Low Stock Products (below " << threshold << ") ---\n";
+        for (int i = 0; i < TABLE_SIZE; ++i) {
+            for (ProductNode* current = buckets[i]; current; current = current->next) {
+                if (current->product.getQuantity() < threshold) {
+                    cout << current->product << '\n';
+                    found = true;
                 }
             }
         }
-        ifstream suppFile("suppliers.txt");
-        if (suppFile) {
-            string label, border, prefix, name, contact;
-            int count;
-            if (suppFile >> label >> count) {
-                suppFile.ignore();
-                getline(suppFile, border);
-                supplierCount = 0;
-                for (int i = 0; i < count && i < 20; ++i) {
-                    int id;
-                    if (!(suppFile >> prefix >> id >> prefix)) break;
-                    suppFile.ignore();
-                    if (!getline(suppFile, name) || !(suppFile >> prefix)) break;
-                    getline(suppFile >> ws, contact);
-                    if (!(suppFile >> prefix)) break;
-                    suppliers[supplierCount++] = Supplier(id, name, contact);
-                }
-            }
+        if (!found) {
+            cout << "No low-stock products.\n";
         }
     }
 };
+bool readInteger(const string& prompt, int& value) {
+    cout << prompt;
+    if (cin >> value) {
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        return true;
+    }
+    if (cin.eof()) {
+        return false;
+    }
+    cin.clear();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cout << "Invalid input. Please enter a whole number.\n";
+    return false;
+}
+#ifndef INVENTORY_MODULE_NO_MAIN
 int main() {
-    SupplyChain system;
-    int choice;
-    do {
-        cout << "\n=======================================\n";
-        cout << "  SUPPLY CHAIN MANAGEMENT SYSTEM   \n";
-        cout << "=======================================\n";
-        cout << "1. Add Product\n";
-        cout << "2. View All Products\n";
-        cout << "3. Search Product (with Supplier Info)\n";
-        cout << "4. Update Product Stock\n";
-        cout << "5. Delete Product\n";
-        cout << "6. Add Supplier\n";
-        cout << "7. View Suppliers\n";
-        cout << "8. Exit\n";
-        cout << "Enter choice: ";
-        cin >> choice;
-        switch (choice) {
-            case 1:
-                system.addProduct();
-                break;
-            case 2:
-                system.displayAll();
-                break;
-            case 3:
-                system.searchProduct();
-                break;
-            case 4:
-                system.updateStock();
-                break;
-            case 5:
-                system.deleteProduct();
-                break;
-            case 6:
-                system.addSupplier();
-                break;
-            case 7:
-                system.displaySuppliers();
-                break;
-            case 8:
-                cout << "Exiting program. Data saved automatically.\n";
-                break;
-            default:
-                cout << "Invalid choice! Please try again.\n";
+    InventoryManager inventory;
+    int choice = -1;
+    while (choice != 0) {
+        cout << "\n--- Inventory Manager (Person A) ---\n"
+             << "1. Add product\n"
+             << "2. Delete product\n"
+             << "3. Update product stock\n"
+             << "4. Search product by ID\n"
+             << "5. Display all products\n"
+             << "6. Display low-stock products\n"
+             << "0. Exit\n";
+        if (!readInteger("Choice: ", choice)) {
+            if (cin.eof()) break;
+            continue;
         }
-    } while (choice != 8);
+        if (choice == 1) {
+            Product product;
+            cout << "Enter product as ID|name|price|quantity (example: 101|Laptop Pro|899.99|12):\n";
+            if (!(cin >> product)) {
+                cout << "Invalid product. Use a positive ID, non-negative price and stock, and a non-empty name without '|'.\n";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            } else if (inventory.addProduct(product)) {
+                cout << "Product added successfully.\n";
+            } else {
+                cout << "That product ID already exists.\n";
+            }
+        } else if (choice == 2) {
+            int id;
+            if (!readInteger("Product ID to delete: ", id)) {
+                continue;
+            }
+            if (inventory.deleteProduct(id)) {
+                cout << "Product deleted successfully.\n";
+            } else {
+                cout << "Product not found.\n";
+            }
+        } else if (choice == 3) {
+            int id;
+            if (!readInteger("Product ID to update: ", id)) {
+                continue;
+            }
+            Product* product = inventory.searchProduct(id);
+            if (!product) {
+                cout << "Product not found.\n";
+                continue;
+            }
+            int quantity;
+            if (readInteger("Enter new stock quantity: ", quantity)) {
+                if (quantity < 0) {
+                    cout << "Stock cannot be negative.\n";
+                } else {
+                    product->setQuantity(quantity);
+                    cout << "Stock updated successfully.\n";
+                }
+            }
+        } else if (choice == 4) {
+            int id;
+            if (!readInteger("Product ID to search: ", id)) {
+                continue;
+            }
+            Product* product = inventory.searchProduct(id);
+            if (product) {
+                cout << *product << '\n';
+            } else {
+                cout << "Product not found.\n";
+            }
+        } else if (choice == 5) {
+            inventory.displayProducts();
+        } else if (choice == 6) {
+            int threshold;
+            if (readInteger("Show products with stock below: ", threshold)) {
+                if (threshold < 0) {
+                    cout << "Threshold cannot be negative.\n";
+                } else {
+                    inventory.displayLowStock(threshold);
+                }
+            }
+        } else if (choice == 0) {
+            cout << "Inventory manager closed. Data is currently in memory only.\n";
+        } else {
+            cout << "Invalid choice. Select an option from the menu.\n";
+        }
+    }
     return 0;
 }
+#endif
