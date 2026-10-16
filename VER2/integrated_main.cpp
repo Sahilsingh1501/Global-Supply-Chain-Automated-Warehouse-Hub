@@ -183,22 +183,16 @@ void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManag
     while (choice != 0) {
         cout << "\n--- Supply Chain Manager  ---\n"
              << "1. Add route\n"
-             << "2. Remove route\n"
-             << "3. Display connected warehouses\n"
-             << "4. Find route between warehouses\n"
-             << "5. Create shipment\n"
-             << "6. Move shipment to next warehouse\n"
-             << "7. Mark shipment delayed\n"
-             << "8. Resume shipment\n"
-             << "9. Track one shipment\n"
-             << "10. Display all shipments\n"
+             << "2. Display connected warehouses\n"
+             << "3. Find route between warehouses\n"
+             << "4. Create shipment\n"
              << "0. Return to main menu\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) return;
             continue;
         }
 
-        if (choice == 1 || choice == 2 || choice == 4) {
+        if (choice == 1 || choice == 3) {
             int fromId;
             int toId;
             if (!readInteger("Origin warehouse ID: ", fromId) ||
@@ -206,15 +200,12 @@ void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManag
             if (choice == 1) {
                 if (supplyChain.addRoute(fromId, toId))
                     saveChanges(persistence, inventory, warehouses, supplyChain);
-            } else if (choice == 2) {
-                if (supplyChain.removeRoute(fromId, toId))
-                    saveChanges(persistence, inventory, warehouses, supplyChain);
             } else {
                 supplyChain.findAndDisplayRoute(fromId, toId);
             }
-        } else if (choice == 3) {
+        } else if (choice == 2) {
             supplyChain.displayRoutes();
-        } else if (choice == 5) {
+        } else if (choice == 4) {
             int originId;
             int destinationId;
             int productId;
@@ -225,22 +216,6 @@ void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManag
                 !readInteger("Shipment quantity: ", quantity)) continue;
             if (supplyChain.createShipment(originId, destinationId, productId, quantity))
                 saveChanges(persistence, inventory, warehouses, supplyChain);
-        } else if (choice == 6) {
-            int shipmentId;
-            if (readInteger("Shipment ID to move: ", shipmentId) &&
-                supplyChain.advanceShipment(shipmentId))
-                saveChanges(persistence, inventory, warehouses, supplyChain);
-        } else if (choice == 7 || choice == 8) {
-            int shipmentId;
-            if (readInteger("Shipment ID: ", shipmentId) &&
-                supplyChain.updateShipmentStatus(shipmentId, choice == 7))
-                saveChanges(persistence, inventory, warehouses, supplyChain);
-        } else if (choice == 9) {
-            int shipmentId;
-            if (readInteger("Shipment ID to track: ", shipmentId))
-                supplyChain.displayShipment(shipmentId);
-        } else if (choice == 10) {
-            supplyChain.displayShipments();
         } else if (choice != 0) {
             cout << "Invalid choice. Select an option from the menu.\n";
         }
