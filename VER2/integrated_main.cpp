@@ -39,9 +39,7 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
              << "1. Add product\n"
              << "2. Delete product\n"
              << "3. Update product stock\n"
-             << "4. Search product by ID\n"
-             << "5. Display all products\n"
-             << "6. Display low-stock products\n"
+             << "4. Display all products\n"
              << "0. Return to main menu\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) return;
@@ -100,19 +98,7 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                 }
             }
         } else if (choice == 4) {
-            int id;
-            if (!readInteger("Product ID to search: ", id)) continue;
-            Product* product = inventory.searchProduct(id);
-            if (product) cout << *product << '\n';
-            else cout << "Product not found.\n";
-        } else if (choice == 5) {
             inventory.displayProducts();
-        } else if (choice == 6) {
-            int threshold;
-            if (readInteger("Show products with stock below: ", threshold)) {
-                if (threshold < 0) cout << "Threshold cannot be negative.\n";
-                else inventory.displayLowStock(threshold);
-            }
         } else if (choice != 0) {
             cout << "Invalid choice. Select an option from the menu.\n";
         }

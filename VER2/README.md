@@ -4,7 +4,7 @@ The project has a single integrated console application for Persons A, B, C, and
 
 ## Implemented modules
 
-- `main.cpp` (Person A): inventory stored in a separate-chaining hash table, with add, delete, update, search, display, low-stock reports, and `<<` / `>>` product operators.
+- `main.cpp` (Person A): inventory stored in a separate-chaining hash table, with add, delete, update, display, and `<<` / `>>` product operators.
 - `warehouse_module.cpp` (Person B): warehouses stored in a binary search tree ordered by warehouse ID. Supports adding, deleting, searching, displaying, and storing/removing product quantities. Products stored in a warehouse must first exist in the inventory catalog.
 - `supply_chain_module.cpp` (Person C): warehouse routes represented by a graph, BFS route finding, route add/remove, shipment creation and tracking, shipment status updates, and step-by-step movement. Dispatch removes stock from the origin; delivery adds it to the destination, subject to its capacity.
 - `integrated_main.cpp`: connects all three modules under one main menu. It prevents deleting catalog products that are stored in a warehouse, deleting warehouses referenced by routes or active shipments, and removing routes required by active shipments.

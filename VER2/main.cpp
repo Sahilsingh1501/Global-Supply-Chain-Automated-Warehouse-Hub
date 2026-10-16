@@ -208,21 +208,6 @@ public:
             cout << "Inventory is empty.\n";
         }
     }
-    void displayLowStock(int threshold) const {
-        bool found = false;
-        cout << "\n--- Low Stock Products (below " << threshold << ") ---\n";
-        for (int i = 0; i < TABLE_SIZE; ++i) {
-            for (ProductNode* current = buckets[i]; current; current = current->next) {
-                if (current->product.getQuantity() < threshold) {
-                    cout << current->product << '\n';
-                    found = true;
-                }
-            }
-        }
-        if (!found) {
-            cout << "No low-stock products.\n";
-        }
-    }
 };
 bool readInteger(const string& prompt, int& value) {
     cout << prompt;
@@ -247,9 +232,7 @@ int main() {
              << "1. Add product\n"
              << "2. Delete product\n"
              << "3. Update product stock\n"
-             << "4. Search product by ID\n"
-             << "5. Display all products\n"
-             << "6. Display low-stock products\n"
+             << "4. Display all products\n"
              << "0. Exit\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) break;
@@ -297,27 +280,7 @@ int main() {
                 }
             }
         } else if (choice == 4) {
-            int id;
-            if (!readInteger("Product ID to search: ", id)) {
-                continue;
-            }
-            Product* product = inventory.searchProduct(id);
-            if (product) {
-                cout << *product << '\n';
-            } else {
-                cout << "Product not found.\n";
-            }
-        } else if (choice == 5) {
             inventory.displayProducts();
-        } else if (choice == 6) {
-            int threshold;
-            if (readInteger("Show products with stock below: ", threshold)) {
-                if (threshold < 0) {
-                    cout << "Threshold cannot be negative.\n";
-                } else {
-                    inventory.displayLowStock(threshold);
-                }
-            }
         } else if (choice == 0) {
             cout << "Inventory manager closed. Data is currently in memory only.\n";
         } else {
