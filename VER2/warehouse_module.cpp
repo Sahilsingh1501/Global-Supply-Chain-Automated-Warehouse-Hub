@@ -367,10 +367,8 @@ int main() {
         cout << "\n--- Warehouse Manager (Person B) ---\n"
              << "1. Add warehouse\n"
              << "2. Delete warehouse\n"
-             << "3. Search warehouse\n"
-             << "4. Display all warehouses\n"
-             << "5. Store product in warehouse\n"
-             << "6. Remove product quantity from warehouse\n"
+             << "3. Display all warehouses\n"
+             << "4. Store product in warehouse\n"
              << "0. Exit\n";
         if (!warehouseReadInteger("Choice: ", choice)) {
             if (cin.eof()) break;
@@ -401,17 +399,8 @@ int main() {
                 cout << "Warehouse deleted successfully.\n";
             }
         } else if (choice == 3) {
-            int id;
-            if (!warehouseReadInteger("Warehouse ID to search: ", id)) continue;
-            Warehouse* warehouse = manager.searchWarehouse(id);
-            if (warehouse) {
-                warehouse->display();
-            } else {
-                cout << "Warehouse not found.\n";
-            }
-        } else if (choice == 4) {
             manager.displayWarehouses();
-        } else if (choice == 5) {
+        } else if (choice == 4) {
             int warehouseId;
             int productId;
             int quantity;
@@ -431,23 +420,6 @@ int main() {
                 cout << "Product ID and quantity must be greater than zero.\n";
             } else {
                 warehouse->addProduct(productId, productName, quantity);
-            }
-        } else if (choice == 6) {
-            int warehouseId;
-            int productId;
-            int quantity;
-            if (!warehouseReadInteger("Warehouse ID: ", warehouseId) ||
-                !warehouseReadInteger("Product ID: ", productId) ||
-                !warehouseReadInteger("Quantity to remove: ", quantity)) {
-                continue;
-            }
-            Warehouse* warehouse = manager.searchWarehouse(warehouseId);
-            if (!warehouse) {
-                cout << "Warehouse not found.\n";
-            } else if (productId <= 0 || quantity <= 0) {
-                cout << "Product ID and quantity must be greater than zero.\n";
-            } else {
-                warehouse->removeProduct(productId, quantity);
             }
         } else if (choice == 0) {
             cout << "Warehouse manager closed. Data is currently in memory only.\n";

@@ -113,10 +113,8 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
         cout << "\n--- Warehouse Manager ---\n"
              << "1. Add warehouse\n"
              << "2. Delete warehouse\n"
-             << "3. Search warehouse\n"
-             << "4. Display all warehouses\n"
-             << "5. Store a catalog product\n"
-             << "6. Remove product quantity\n"
+             << "3. Display all warehouses\n"
+             << "4. Store a catalog product\n"
              << "0. Return to main menu\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) return;
@@ -153,14 +151,8 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                              "WAREHOUSE_DELETED", "Warehouse ID " + to_string(id));
             }
         } else if (choice == 3) {
-            int id;
-            if (!readInteger("Warehouse ID to search: ", id)) continue;
-            Warehouse* warehouse = warehouses.searchWarehouse(id);
-            if (warehouse) warehouse->display();
-            else cout << "Warehouse not found.\n";
-        } else if (choice == 4) {
             warehouses.displayWarehouses();
-        } else if (choice == 5) {
+        } else if (choice == 4) {
             int warehouseId;
             int productId;
             int quantity;
@@ -193,22 +185,6 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                                  ", product ID " + to_string(productId) +
                                  ", quantity " + to_string(quantity));
             }
-        } else if (choice == 6) {
-            int warehouseId;
-            int productId;
-            int quantity;
-            if (!readInteger("Warehouse ID: ", warehouseId) ||
-                !readInteger("Product ID: ", productId) ||
-                !readInteger("Quantity to remove: ", quantity)) continue;
-            Warehouse* warehouse = warehouses.searchWarehouse(warehouseId);
-            if (!warehouse) cout << "Warehouse not found.\n";
-            else if (quantity <= 0) cout << "Quantity must be greater than zero.\n";
-            else if (warehouse->removeProduct(productId, quantity))
-                recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                             "WAREHOUSE_STOCK_REMOVED",
-                             "Warehouse ID " + to_string(warehouseId) +
-                             ", product ID " + to_string(productId) +
-                             ", quantity " + to_string(quantity));
         } else if (choice != 0) {
             cout << "Invalid choice. Select an option from the menu.\n";
         }
