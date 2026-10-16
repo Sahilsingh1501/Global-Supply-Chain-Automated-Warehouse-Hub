@@ -184,28 +184,23 @@ void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManag
         cout << "\n--- Supply Chain Manager  ---\n"
              << "1. Add route\n"
              << "2. Display connected warehouses\n"
-             << "3. Find route between warehouses\n"
-             << "4. Create shipment\n"
+             << "3. Create shipment\n"
              << "0. Return to main menu\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) return;
             continue;
         }
 
-        if (choice == 1 || choice == 3) {
+        if (choice == 1) {
             int fromId;
             int toId;
             if (!readInteger("Origin warehouse ID: ", fromId) ||
                 !readInteger("Destination warehouse ID: ", toId)) continue;
-            if (choice == 1) {
-                if (supplyChain.addRoute(fromId, toId))
-                    saveChanges(persistence, inventory, warehouses, supplyChain);
-            } else {
-                supplyChain.findAndDisplayRoute(fromId, toId);
-            }
+            if (supplyChain.addRoute(fromId, toId))
+                saveChanges(persistence, inventory, warehouses, supplyChain);
         } else if (choice == 2) {
             supplyChain.displayRoutes();
-        } else if (choice == 4) {
+        } else if (choice == 3) {
             int originId;
             int destinationId;
             int productId;

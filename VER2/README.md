@@ -6,7 +6,7 @@ The project has a single integrated console application for Persons A, B, C, and
 
 - `main.cpp` (Person A): inventory stored in a separate-chaining hash table, with add, delete, update, display, and `<<` / `>>` product operators.
 - `warehouse_module.cpp` (Person B): warehouses stored in a binary search tree ordered by warehouse ID. Supports adding, deleting, displaying, and storing inventory products. Products must first be added in Inventory Manager.
-- `supply_chain_module.cpp` (Person C): warehouse routes represented by a graph, BFS route finding, route creation, and shipment creation. The integrated manager supports displaying connected warehouses, finding routes, adding routes, and creating shipments.
+- `supply_chain_module.cpp` (Person C): warehouse routes represented by a graph, BFS route finding, route creation, and shipment creation. The integrated manager supports adding routes, displaying connected warehouses, and creating shipments; BFS route finding remains available in the standalone Person C demo.
 - `integrated_main.cpp`: connects all three modules under one main menu. It prevents deleting inventory products that are stored in a warehouse, deleting warehouses referenced by routes or active shipments, and removing routes required by active shipments.
 - Person D integration: saves inventory, warehouse stock, routes, and shipment progress to a versioned snapshot and validates saved data on startup.
 
