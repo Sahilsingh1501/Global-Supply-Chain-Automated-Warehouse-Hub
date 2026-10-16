@@ -30,24 +30,6 @@ bool allocatedStockIsValid(const InventoryManager& inventory,
     return valid;
 }
 
-void displaySystemReport(const InventoryManager& inventory,
-                         const WarehouseManager& warehouses,
-                         const SupplyChainManager& supplyChain) {
-    ostringstream stockValue;
-    stockValue << fixed << setprecision(2) << inventory.totalStockValue();
-    cout << "\n--- System Operations Report ---\n"
-         << "Catalog products: " << inventory.productCount() << '\n'
-         << "Catalog stock value: $" << stockValue.str() << '\n'
-         << "Warehouses: " << warehouses.warehouseCount() << '\n'
-         << "Warehouse capacity used: " << warehouses.totalUsedCapacity()
-         << " / " << warehouses.totalCapacity() << " units\n"
-         << "Active routes: " << supplyChain.routeCount() << '\n'
-         << "Shipments: " << supplyChain.shipmentCount()
-         << " (in transit: " << supplyChain.shipmentCount("In Transit")
-         << ", delayed: " << supplyChain.shipmentCount("Delayed")
-         << ", delivered: " << supplyChain.shipmentCount("Delivered") << ")\n";
-}
-
 void runInventoryManager(InventoryManager& inventory, const WarehouseManager& warehouses,
                          const SupplyChainManager& supplyChain, PersonD::AuditLog& audit,
                          const SystemPersistence& persistence) {
@@ -149,7 +131,6 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
              << "4. Display all warehouses\n"
              << "5. Store a catalog product\n"
              << "6. Remove product quantity\n"
-             << "7. Display capacity report\n"
              << "0. Return to main menu\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) return;
@@ -242,8 +223,6 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                              "Warehouse ID " + to_string(warehouseId) +
                              ", product ID " + to_string(productId) +
                              ", quantity " + to_string(quantity));
-        } else if (choice == 7) {
-            warehouses.displayCapacityReport();
         } else if (choice != 0) {
             cout << "Invalid choice. Select an option from the menu.\n";
         }
@@ -380,8 +359,7 @@ int runSystem() {
              << "2. Warehouse Manager\n"
              << "3. Supply Chain Manager\n"
              << "4. Display inventory and warehouses\n"
-             << "5. Display operations report\n"
-             << "6. Display audit log\n"
+             << "5. Display audit log\n"
              << "0. Save & exit\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) break;
@@ -396,12 +374,9 @@ int runSystem() {
         } else if (choice == 4) {
             inventory.displayProducts();
             warehouses.displayWarehouses();
-            warehouses.displayCapacityReport();
             supplyChain.displayRoutes();
             supplyChain.displayShipments();
         } else if (choice == 5) {
-            displaySystemReport(inventory, warehouses, supplyChain);
-        } else if (choice == 6) {
             displayAuditLog();
         } else if (choice == 0) {
             audit.record("SYSTEM_STOPPED", "Application shut down");

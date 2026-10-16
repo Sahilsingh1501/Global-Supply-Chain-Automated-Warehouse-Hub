@@ -2,7 +2,6 @@
 #define INVENTORY_MODULE_NO_MAIN
 #include "main.cpp"
 #endif
-
 #include <iostream>
 #include <limits>
 #include <string>
@@ -256,14 +255,6 @@ private:
     size_t warehouseCount(WarehouseNode* node) const {
         return node ? 1 + warehouseCount(node->left) + warehouseCount(node->right) : 0;
     }
-    long long totalCapacity(WarehouseNode* node) const {
-        return node ? node->warehouse.getCapacity() +
-                      totalCapacity(node->left) + totalCapacity(node->right) : 0;
-    }
-    long long totalUsedCapacity(WarehouseNode* node) const {
-        return node ? node->warehouse.getUsedCapacity() +
-                      totalUsedCapacity(node->left) + totalUsedCapacity(node->right) : 0;
-    }
     void saveStateInOrder(WarehouseNode* node, ostream& output) const {
         if (!node) return;
         saveStateInOrder(node->left, output);
@@ -276,14 +267,6 @@ private:
         node->warehouse.display();
         displayInOrder(node->right);
     }
-    void displayCapacityInOrder(WarehouseNode* node) const {
-        if (!node) return;
-        displayCapacityInOrder(node->left);
-        cout << "ID: " << node->warehouse.getId()
-             << " | Capacity: " << node->warehouse.getUsedCapacity()
-             << " / " << node->warehouse.getCapacity() << " units\n";
-        displayCapacityInOrder(node->right);
-    }
 public:
     WarehouseManager() : root(nullptr) {}
     ~WarehouseManager() { destroy(root); }
@@ -295,8 +278,6 @@ public:
         return added;
     }
     size_t warehouseCount() const { return warehouseCount(root); }
-    long long totalCapacity() const { return totalCapacity(root); }
-    long long totalUsedCapacity() const { return totalUsedCapacity(root); }
     void saveState(ostream& output) const {
         output << warehouseCount() << '\n';
         saveStateInOrder(root, output);
@@ -358,14 +339,6 @@ public:
         cout << "\n--- Warehouses (BST, ordered by ID) ---\n";
         displayInOrder(root);
     }
-    void displayCapacityReport() const {
-        if (!root) {
-            cout << "No warehouses have been added.\n";
-            return;
-        }
-        cout << "\n--- Warehouse Capacity ---\n";
-        displayCapacityInOrder(root);
-    }
 };
 bool warehouseReadInteger(const string& prompt, int& value) {
     cout << prompt;
@@ -398,7 +371,6 @@ int main() {
              << "4. Display all warehouses\n"
              << "5. Store product in warehouse\n"
              << "6. Remove product quantity from warehouse\n"
-             << "7. Display capacity report\n"
              << "0. Exit\n";
         if (!warehouseReadInteger("Choice: ", choice)) {
             if (cin.eof()) break;
@@ -477,8 +449,6 @@ int main() {
             } else {
                 warehouse->removeProduct(productId, quantity);
             }
-        } else if (choice == 7) {
-            manager.displayCapacityReport();
         } else if (choice == 0) {
             cout << "Warehouse manager closed. Data is currently in memory only.\n";
         } else {
