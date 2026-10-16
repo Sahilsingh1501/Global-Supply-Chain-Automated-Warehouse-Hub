@@ -1,6 +1,6 @@
+#include <cmath>
 #include <iostream>
 #include <limits>
-#include <cmath>
 #include <sstream>
 #include <string>
 #include "person_d_support.h"
@@ -29,7 +29,7 @@ istream& operator>>(istream& input, Product& product) {
     if (!getline(input >> ws, line)) {
         return input;
     }
-  stringstream fields(line);
+    stringstream fields(line);
     string idText;
     string name;
     string priceText;
@@ -100,23 +100,20 @@ public:
     InventoryManager& operator=(const InventoryManager&) = delete;
     size_t productCount() const {
         size_t total = 0;
-        for (int i = 0; i < TABLE_SIZE; ++i)
-            for (ProductNode* current = buckets[i]; current; current = current->next)
+        for (int i = 0; i < TABLE_SIZE; ++i) {
+            for (ProductNode* current = buckets[i]; current; current = current->next) {
                 ++total;
-        return total;
-    }
-    double totalStockValue() const {
-        double total = 0;
-        for (int i = 0; i < TABLE_SIZE; ++i)
-            for (ProductNode* current = buckets[i]; current; current = current->next)
-                total += current->product.getPrice() * current->product.getQuantity();
+            }
+        }
         return total;
     }
     template <typename Callback>
     void forEachProduct(Callback callback) const {
-        for (int i = 0; i < TABLE_SIZE; ++i)
-            for (ProductNode* current = buckets[i]; current; current = current->next)
+        for (int i = 0; i < TABLE_SIZE; ++i) {
+            for (ProductNode* current = buckets[i]; current; current = current->next) {
                 callback(current->product);
+            }
+        }
     }
     void saveState(ostream& output) const {
         output << productCount() << '\n' << setprecision(17);
@@ -197,7 +194,7 @@ public:
     }
     void displayProducts() const {
         bool found = false;
-        cout << "\n--- Product Inventory (Hash Table) ---\n";
+        cout << "\n--- Inventory ---\n";
         for (int i = 0; i < TABLE_SIZE; ++i) {
             for (ProductNode* current = buckets[i]; current; current = current->next) {
                 cout << current->product << '\n';
@@ -205,7 +202,7 @@ public:
             }
         }
         if (!found) {
-            cout << "Inventory is empty.\n";
+            cout << "No products have been added yet.\n";
         }
     }
 };
@@ -220,7 +217,7 @@ bool readInteger(const string& prompt, int& value) {
     }
     cin.clear();
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    cout << "Invalid input. Please enter a whole number.\n";
+    cout << "Please enter a whole number.\n";
     return false;
 }
 #ifndef INVENTORY_MODULE_NO_MAIN
@@ -228,7 +225,7 @@ int main() {
     InventoryManager inventory;
     int choice = -1;
     while (choice != 0) {
-        cout << "\n--- Inventory Manager (Person A) ---\n"
+        cout << "\n--- Inventory Manager ---\n"
              << "1. Add product\n"
              << "2. Delete product\n"
              << "3. Update product stock\n"
@@ -240,15 +237,17 @@ int main() {
         }
         if (choice == 1) {
             Product product;
-            cout << "Enter product as ID|name|price|quantity (example: 101|Laptop Pro|899.99|12):\n";
+            cout << "Enter product as ID|name|price|quantity "
+                    "(example: 101|Laptop Pro|899.99|12):\n";
             if (!(cin >> product)) {
-                cout << "Invalid product. Use a positive ID, non-negative price and stock, and a non-empty name without '|'.\n";
+                cout << "Product details aren't valid. Use a positive ID, a non-negative "
+                        "price and quantity, and a name without '|'.\n";
                 cin.clear();
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
             } else if (inventory.addProduct(product)) {
                 cout << "Product added successfully.\n";
             } else {
-                cout << "That product ID already exists.\n";
+                cout << "A product with that ID already exists.\n";
             }
         } else if (choice == 2) {
             int id;
@@ -282,9 +281,9 @@ int main() {
         } else if (choice == 4) {
             inventory.displayProducts();
         } else if (choice == 0) {
-            cout << "Inventory manager closed. Data is currently in memory only.\n";
+            cout << "Inventory Manager closed. Changes are only in memory.\n";
         } else {
-            cout << "Invalid choice. Select an option from the menu.\n";
+            cout << "Please choose one of the listed options.\n";
         }
     }
     return 0;

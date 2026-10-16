@@ -12,7 +12,8 @@ void saveChanges(const SystemPersistence& persistence, const InventoryManager& i
                  const SupplyChainManager& supplyChain) {
     string error;
     if (!persistence.save(inventory, warehouses, supplyChain, error))
-        cout << "Save error: " << error << "\nThe change remains in memory for this run.\n";
+        cout << "Could not save changes: " << error
+             << "\nThe changes are still in memory, but may be lost when the app closes.\n";
 }
 
 bool allocatedStockIsValid(const InventoryManager& inventory,
@@ -32,7 +33,7 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                          const SystemPersistence& persistence) {
     int choice = -1;
     while (choice != 0) {
-        cout << "\n--- Inventory Manager  ---\n"
+        cout << "\n--- Inventory Manager ---\n"
              << "1. Add product\n"
              << "2. Delete product\n"
              << "3. Update product stock\n"
@@ -45,23 +46,24 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
 
         if (choice == 1) {
             Product product;
-            cout << "Enter product as ID|name|price|quantity (example: 101|Laptop Pro|899.99|12):\n";
+            cout << "Enter product as ID|name|price|quantity "
+                    "(example: 101|Laptop Pro|899.99|12):\n";
             if (!(cin >> product)) {
-                cout << "Invalid product. Use a positive ID, non-negative price and stock, "
-                        "and a non-empty name without '|'.\n";
+                cout << "Product details aren't valid. Use a positive ID, a non-negative "
+                        "price and quantity, and a name without '|'.\n";
                 cin.clear();
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
             } else if (inventory.addProduct(product)) {
                 cout << "Product added successfully.\n";
                 saveChanges(persistence, inventory, warehouses, supplyChain);
             } else {
-                cout << "That product ID already exists.\n";
+                cout << "A product with that ID already exists.\n";
             }
         } else if (choice == 2) {
             int id;
             if (!readInteger("Product ID to delete: ", id)) continue;
             if (warehouses.containsProduct(id) || supplyChain.usesProduct(id)) {
-                cout << "Cannot delete a product that is stored or in an active shipment.\n";
+                cout << "This product is stored or in an active shipment, so it can't be deleted.\n";
             } else if (inventory.deleteProduct(id)) {
                 cout << "Product deleted successfully.\n";
                 saveChanges(persistence, inventory, warehouses, supplyChain);
@@ -82,7 +84,7 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                     cout << "Stock cannot be negative.\n";
                 } else if (quantity < warehouses.storedProductQuantity(id) +
                                       supplyChain.inTransitProductQuantity(id)) {
-                    cout << "Stock cannot be less than the quantity stored or in transit.\n";
+                    cout << "Stock can't be lower than the amount stored or in transit.\n";
                 } else {
                     product->setQuantity(quantity);
                     cout << "Stock updated successfully.\n";
@@ -92,7 +94,7 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
         } else if (choice == 4) {
             inventory.displayProducts();
         } else if (choice != 0) {
-            cout << "Invalid choice. Select an option from the menu.\n";
+            cout << "Please choose one of the listed options.\n";
         }
     }
 }
@@ -123,7 +125,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                 !readText("Location: ", location) ||
                 !readInteger("Maximum capacity (units): ", capacity)) continue;
             if (id <= 0 || capacity <= 0) {
-                cout << "Warehouse ID and capacity must be greater than zero.\n";
+                cout << "Warehouse ID and capacity must both be greater than zero.\n";
             } else if (!warehouses.addWarehouse(id, name, location, capacity)) {
                 cout << "A warehouse with that ID already exists.\n";
             } else {
@@ -134,7 +136,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
             int id;
             if (!readInteger("Warehouse ID to delete: ", id)) continue;
             if (supplyChain.usesWarehouse(id)) {
-                cout << "Remove its routes and finish its active shipments before deleting it.\n";
+                cout << "Remove its routes and complete its active shipments before deleting it.\n";
             } else if (warehouses.deleteWarehouse(id)) {
                 cout << "Warehouse deleted successfully.\n";
                 saveChanges(persistence, inventory, warehouses, supplyChain);
@@ -154,16 +156,17 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
             if (!readInteger("Inventory product ID: ", productId)) continue;
             Product* product = inventory.searchProduct(productId);
             if (!product) {
-                cout << "Add the product in Inventory Manager first.\n";
+                cout << "Add this product in Inventory Manager before storing it.\n";
                 continue;
             }
             if (!readInteger("Quantity to store: ", quantity)) continue;
             if (quantity <= 0) {
-                cout << "Quantity must be greater than zero.\n";
+                cout << "Enter a quantity greater than zero.\n";
             } else if (quantity > product->getQuantity() -
-                                  warehouses.storedProductQuantity(productId) -
-                                  supplyChain.inTransitProductQuantity(productId)) {
-                cout << "That quantity exceeds stock available after accounting for products already stored or in transit.\n";
+                                      warehouses.storedProductQuantity(productId) -
+                                      supplyChain.inTransitProductQuantity(productId)) {
+                cout << "Not enough stock is available after counting items already stored "
+                        "or in transit.\n";
             } else {
                 int previousQuantity = warehouse->productQuantity(productId);
                 warehouse->addProduct(productId, product->getName(), quantity);
@@ -171,7 +174,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                     saveChanges(persistence, inventory, warehouses, supplyChain);
             }
         } else if (choice != 0) {
-            cout << "Invalid choice. Select an option from the menu.\n";
+            cout << "Please choose one of the listed options.\n";
         }
     }
 }
@@ -212,7 +215,7 @@ void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManag
             if (supplyChain.createShipment(originId, destinationId, productId, quantity))
                 saveChanges(persistence, inventory, warehouses, supplyChain);
         } else if (choice != 0) {
-            cout << "Invalid choice. Select an option from the menu.\n";
+            cout << "Please choose one of the listed options.\n";
         }
     }
 }
@@ -228,7 +231,7 @@ int runSystem() {
         return 1;
     }
     if (!allocatedStockIsValid(inventory, warehouses, supplyChain)) {
-        cerr << "Startup error: saved inventory stock is lower than the amount stored or in transit.\n";
+        cerr << "Startup error: saved inventory stock is less than the amount stored or in transit.\n";
         return 1;
     }
     int choice = -1;
@@ -259,11 +262,11 @@ int runSystem() {
             supplyChain.displayShipments();
         } else if (choice == 0) {
             if (persistence.save(inventory, warehouses, supplyChain, error))
-                cout << "Data saved to warehouse_system.dat. Goodbye.\n";
+                cout << "Data saved. Goodbye.\n";
             else
                 cerr << "Save error: " << error << '\n';
         } else {
-            cout << "Invalid choice. Select an option from the menu.\n";
+            cout << "Please choose one of the listed options.\n";
         }
     }
     return 0;

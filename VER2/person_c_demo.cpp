@@ -8,12 +8,14 @@ int main() {
     int choice = -1;
 
     while (choice != 0) {
-        cout << "\n--- Person C: Supply Chain ---\n"
-             << "1 Add product  2 Add warehouse  3 Store product\n"
-             << "4 Add route    5 Remove route   6 Display routes\n"
-             << "7 Find route   8 Create shipment 9 Move shipment\n"
-             << "10 Delay       11 Resume        12 Track shipment\n"
-             << "13 List shipments  0 Exit\n";
+        cout << "\n--- Supply Chain Demo ---\n"
+             << "1. Add product      2. Add warehouse\n"
+             << "3. Store product    4. Add route\n"
+             << "5. Remove route     6. Show warehouse connections\n"
+             << "7. Find route       8. Create shipment\n"
+             << "9. Move shipment    10. Delay shipment\n"
+             << "11. Resume shipment 12. Track shipment\n"
+             << "13. List shipments  0. Exit\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) break;
             continue;
@@ -21,13 +23,13 @@ int main() {
 
         if (choice == 1) {
             Product product;
-            cout << "Enter ID|name|price|quantity:\n";
+            cout << "Enter product as ID|name|price|quantity:\n";
             if (!(cin >> product)) {
-                cout << "Invalid product input.\n";
+                cout << "Product details aren't valid.\n";
                 cin.clear();
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
             } else if (!inventory.addProduct(product)) {
-                cout << "Product ID already exists.\n";
+                cout << "A product with that ID already exists.\n";
             }
         } else if (choice == 2) {
             int id, capacity;
@@ -36,7 +38,7 @@ int main() {
                 readText("Location: ", location) && readInteger("Capacity: ", capacity)) {
                 if (id <= 0 || capacity <= 0 ||
                     !warehouses.addWarehouse(id, name, location, capacity))
-                    cout << "Invalid details or warehouse ID already exists.\n";
+                    cout << "Check the warehouse details; its ID may already be in use.\n";
             }
         } else if (choice == 3) {
             int warehouseId, productId, quantity;
@@ -46,11 +48,11 @@ int main() {
             Warehouse* warehouse = warehouses.searchWarehouse(warehouseId);
             Product* product = inventory.searchProduct(productId);
             if (!warehouse || !product) {
-                cout << "Create the warehouse and add the product in Inventory Manager first.\n";
+                cout << "Add the warehouse and product in their managers first.\n";
             } else if (quantity <= 0 || quantity > product->getQuantity() -
                        warehouses.storedProductQuantity(productId) -
                        supplyChain.inTransitProductQuantity(productId)) {
-                cout << "Quantity exceeds stock available after accounting for products already stored or in transit.\n";
+                cout << "Not enough stock is available after counting items already stored or in transit.\n";
             } else {
                 warehouse->addProduct(productId, product->getName(), quantity);
             }
@@ -79,7 +81,7 @@ int main() {
             else if (choice == 11) supplyChain.updateShipmentStatus(id, false);
             else supplyChain.displayShipment(id);
         } else if (choice != 0) {
-            cout << "Invalid choice.\n";
+            cout << "Please choose one of the listed options.\n";
         }
     }
     return 0;

@@ -115,16 +115,16 @@ public:
 
     void addProduct(int productId, const string& productName, int quantity) {
         if (quantity <= 0) {
-            cout << "Quantity must be greater than zero.\n";
+            cout << "Enter a quantity greater than zero.\n";
         } else if (!receiveProduct(productId, productName, quantity)) {
             if (productQuantity(productId) > 0) {
-                cout << "Not enough capacity or product name does not match the stored ID.\n";
+                cout << "Not enough space, or the product name doesn't match that ID.\n";
             } else {
-                cout << "Not enough capacity. Available space: "
+                cout << "Not enough space. Available capacity: "
                      << capacity - usedCapacity << " units.\n";
             }
         } else {
-            cout << "Product stored successfully.\n";
+            cout << "Product added to the warehouse.\n";
         }
     }
 
@@ -137,11 +137,11 @@ public:
             current = current->next;
         }
         if (!current) {
-            cout << "Product is not stored in this warehouse.\n";
+            cout << "This product isn't stored in the warehouse.\n";
             return false;
         }
         if (quantity > current->quantity) {
-            cout << "Cannot remove more units than are currently stored.\n";
+            cout << "You can't remove more units than the warehouse has.\n";
             return false;
         }
         current->quantity -= quantity;
@@ -154,7 +154,7 @@ public:
             }
             delete current;
         }
-        cout << "Product quantity removed; warehouse capacity updated.\n";
+        cout << "Product removed from the warehouse.\n";
         return true;
     }
     void display() const {
@@ -314,7 +314,7 @@ public:
             return false;
         }
         if (!target->warehouse.isEmpty()) {
-            cout << "Warehouse contains products. Remove its products before deleting it.\n";
+            cout << "Empty the warehouse before deleting it.\n";
             return false;
         }
         bool removed = false;
@@ -336,7 +336,7 @@ public:
             cout << "No warehouses have been added.\n";
             return;
         }
-        cout << "\n--- Warehouses (BST, ordered by ID) ---\n";
+        cout << "\n--- Warehouses ---\n";
         displayInOrder(root);
     }
 };
@@ -349,14 +349,14 @@ bool warehouseReadInteger(const string& prompt, int& value) {
     if (cin.eof()) return false;
     cin.clear();
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    cout << "Invalid input. Please enter a whole number.\n";
+    cout << "Please enter a whole number.\n";
     return false;
 }
 bool readText(const string& prompt, string& value) {
     cout << prompt;
     if (!getline(cin, value)) return false;
     if (!value.empty()) return true;
-    cout << "Value cannot be empty.\n";
+    cout << "Please enter a value.\n";
     return false;
 }
 #ifndef WAREHOUSE_MODULE_NO_MAIN
@@ -364,7 +364,7 @@ int main() {
     WarehouseManager manager;
     int choice = -1;
     while (choice != 0) {
-        cout << "\n--- Warehouse Manager (Person B) ---\n"
+        cout << "\n--- Warehouse Manager ---\n"
              << "1. Add warehouse\n"
              << "2. Delete warehouse\n"
              << "3. Display all warehouses\n"
@@ -386,7 +386,7 @@ int main() {
                 continue;
             }
             if (id <= 0 || capacity <= 0) {
-                cout << "Warehouse ID and capacity must be greater than zero.\n";
+                cout << "Warehouse ID and capacity must both be greater than zero.\n";
             } else if (!manager.addWarehouse(id, name, location, capacity)) {
                 cout << "A warehouse with that ID already exists.\n";
             } else {
@@ -422,9 +422,9 @@ int main() {
                 warehouse->addProduct(productId, productName, quantity);
             }
         } else if (choice == 0) {
-            cout << "Warehouse manager closed. Data is currently in memory only.\n";
+            cout << "Warehouse Manager closed. Changes are only in memory.\n";
         } else {
-            cout << "Invalid choice. Select an option from the menu.\n";
+            cout << "Please choose one of the listed options.\n";
         }
     }
     return 0;
