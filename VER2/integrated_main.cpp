@@ -114,7 +114,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
              << "1. Add warehouse\n"
              << "2. Delete warehouse\n"
              << "3. Display all warehouses\n"
-             << "4. Store a catalog product\n"
+             << "4. Store an inventory product in warehouse\n"
              << "0. Return to main menu\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) return;
@@ -162,10 +162,10 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                 cout << "Warehouse not found.\n";
                 continue;
             }
-            if (!readInteger("Catalog product ID: ", productId)) continue;
+            if (!readInteger("Inventory product ID: ", productId)) continue;
             Product* product = inventory.searchProduct(productId);
             if (!product) {
-                cout << "Add the product to the inventory catalog first.\n";
+                cout << "Add the product in Inventory Manager first.\n";
                 continue;
             }
             if (!readInteger("Quantity to store: ", quantity)) continue;
@@ -174,7 +174,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
             } else if (quantity > product->getQuantity() -
                                   warehouses.storedProductQuantity(productId) -
                                   supplyChain.inTransitProductQuantity(productId)) {
-                cout << "The requested quantity exceeds total catalog stock not already stored or in transit.\n";
+                cout << "That quantity exceeds stock available after accounting for products already stored or in transit.\n";
             } else {
                 int previousQuantity = warehouse->productQuantity(productId);
                 warehouse->addProduct(productId, product->getName(), quantity);
@@ -306,7 +306,7 @@ int runSystem() {
         return 1;
     }
     if (!allocatedStockIsValid(inventory, warehouses, supplyChain)) {
-        cerr << "Startup error: saved catalog stock is lower than the amount stored or in transit.\n";
+        cerr << "Startup error: saved inventory stock is lower than the amount stored or in transit.\n";
         return 1;
     }
     if (!audit.record("SYSTEM_STARTED", "Application started"))

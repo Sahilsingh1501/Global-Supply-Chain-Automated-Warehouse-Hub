@@ -46,11 +46,11 @@ int main() {
             Warehouse* warehouse = warehouses.searchWarehouse(warehouseId);
             Product* product = inventory.searchProduct(productId);
             if (!warehouse || !product) {
-                cout << "Create the warehouse and catalog product first.\n";
+                cout << "Create the warehouse and add the product in Inventory Manager first.\n";
             } else if (quantity <= 0 || quantity > product->getQuantity() -
                        warehouses.storedProductQuantity(productId) -
                        supplyChain.inTransitProductQuantity(productId)) {
-                cout << "Quantity exceeds available catalog stock.\n";
+                cout << "Quantity exceeds stock available after accounting for products already stored or in transit.\n";
             } else {
                 warehouse->addProduct(productId, product->getName(), quantity);
             }

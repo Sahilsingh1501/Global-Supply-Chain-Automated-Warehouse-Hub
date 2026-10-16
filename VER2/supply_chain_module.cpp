@@ -306,7 +306,7 @@ public:
         Warehouse* origin = warehouses.searchWarehouse(from);
         if (!p || !origin || !warehouses.searchWarehouse(to) ||
             from == to || quantity <= 0) {
-            cout << "Shipment needs a catalog product, two different warehouses, "
+            cout << "Shipment needs a product added in Inventory Manager, two different warehouses, "
                     "and a positive quantity.\n";
             return false;
         }
