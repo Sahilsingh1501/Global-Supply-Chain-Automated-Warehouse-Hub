@@ -1,0 +1,292 @@
+#ifndef INVENTORY_MODULE_NO_MAIN
+#define INVENTORY_MODULE_NO_MAIN
+#include "main.cpp"
+#endif
+
+#ifndef WAREHOUSE_MODULE_NO_MAIN
+#define WAREHOUSE_MODULE_NO_MAIN
+#include "warehouse_module.cpp"
+#endif
+
+#include <string>
+using namespace std;
+
+struct Shipment {
+    int id, productId, quantity, path[100], length, step;
+    string status;
+    Shipment* next;
+    Shipment() : id(0), productId(0), quantity(0), length(0), step(0),
+                 status("In Transit"), next(nullptr) {}
+};
+
+class SupplyChainManager {
+    static const int LIMIT = 100;
+    WarehouseManager& warehouses;
+    InventoryManager& inventory;
+    int ids[LIMIT], count, nextId;
+    bool routes[LIMIT][LIMIT];
+    Shipment* shipments;
+
+    int indexOf(int id) const {
+        for (int i = 0; i < count; ++i) if (ids[i] == id) return i;
+        return -1;
+    }
+    int addVertex(int id) {
+        int i = indexOf(id);
+        if (i >= 0) return i;
+        if (count == LIMIT) return -1;
+        i = count++;
+        ids[i] = id;
+        for (int j = 0; j < LIMIT; ++j) routes[i][j] = routes[j][i] = false;
+        return i;
+    }
+    Shipment* findShipment(int id) const {
+        for (Shipment* s = shipments; s; s = s->next) if (s->id == id) return s;
+        return nullptr;
+    }
+    bool findPath(int fromId, int toId, int path[], int& length) const {
+        int start = indexOf(fromId), end = indexOf(toId);
+        if (start < 0 || end < 0) return false;
+        int queue[LIMIT], previous[LIMIT], reverse[LIMIT];
+        bool visited[LIMIT] = {};
+        for (int i = 0; i < count; ++i) previous[i] = -1;
+        int front = 0, back = 0;
+        queue[back++] = start;
+        visited[start] = true;
+        while (front < back && !visited[end]) {
+            int at = queue[front++];
+            for (int i = 0; i < count; ++i) {
+                if (routes[at][i] && !visited[i]) {
+                    visited[i] = true;
+                    previous[i] = at;
+                    queue[back++] = i;
+                }
+            }
+        }
+        if (!visited[end]) return false;
+        int size = 0;
+        for (int i = end; i >= 0; i = previous[i]) reverse[size++] = ids[i];
+        length = size;
+        for (int i = 0; i < size; ++i) path[i] = reverse[size - i - 1];
+        return true;
+    }
+
+public:
+    SupplyChainManager(WarehouseManager& w, InventoryManager& i)
+        : warehouses(w), inventory(i), count(0), nextId(1), shipments(nullptr) {
+        for (int r = 0; r < LIMIT; ++r)
+            for (int c = 0; c < LIMIT; ++c) routes[r][c] = false;
+    }
+    ~SupplyChainManager() {
+        while (shipments) {
+            Shipment* next = shipments->next;
+            delete shipments;
+            shipments = next;
+        }
+    }
+    SupplyChainManager(const SupplyChainManager&) = delete;
+    SupplyChainManager& operator=(const SupplyChainManager&) = delete;
+
+    bool addRoute(int from, int to) {
+        Warehouse* a = warehouses.searchWarehouse(from);
+        Warehouse* b = warehouses.searchWarehouse(to);
+        if (from == to || !a || !b) {
+            cout << "Choose two different warehouse IDs that exist.\n";
+            return false;
+        }
+        int needed = (indexOf(from) < 0) + (indexOf(to) < 0);
+        if (count + needed > LIMIT) {
+            cout << "Route limit reached (100 warehouses).\n";
+            return false;
+        }
+        int x = addVertex(from), y = addVertex(to);
+        if (routes[x][y]) {
+            cout << "That route already exists.\n";
+            return false;
+        }
+        routes[x][y] = routes[y][x] = true;
+        cout << "Route added between " << a->getName() << " and " << b->getName() << ".\n";
+        return true;
+    }
+    bool removeRoute(int from, int to) {
+        int x = indexOf(from), y = indexOf(to);
+        if (x < 0 || y < 0 || !routes[x][y]) {
+            cout << "Route not found.\n";
+            return false;
+        }
+        for (Shipment* s = shipments; s; s = s->next) {
+            if (s->status == "Delivered") continue;
+            for (int i = s->step; i + 1 < s->length; ++i) {
+                if ((s->path[i] == from && s->path[i + 1] == to) ||
+                    (s->path[i] == to && s->path[i + 1] == from)) {
+                    cout << "That route is required by an active shipment.\n";
+                    return false;
+                }
+            }
+        }
+        routes[x][y] = routes[y][x] = false;
+        cout << "Route removed.\n";
+        return true;
+    }
+    bool findAndDisplayRoute(int from, int to) const {
+        int path[LIMIT], length;
+        if (!findPath(from, to, path, length)) {
+            cout << "No connected route exists between those warehouses.\n";
+            return false;
+        }
+        cout << "Route: ";
+        for (int i = 0; i < length; ++i) {
+            Warehouse* w = warehouses.searchWarehouse(path[i]);
+            cout << (w ? w->getName() : "Unknown") << " [" << path[i] << "]";
+            if (i + 1 < length) cout << " -> ";
+        }
+        cout << '\n';
+        return true;
+    }
+    void displayRoutes() const {
+        if (!count) {
+            cout << "No routes have been added.\n";
+            return;
+        }
+        cout << "\n--- Connected Warehouses and Routes ---\n";
+        for (int i = 0; i < count; ++i) {
+            Warehouse* w = warehouses.searchWarehouse(ids[i]);
+            if (!w) continue;
+            cout << w->getName() << " [" << ids[i] << "] -> ";
+            bool found = false;
+            for (int j = 0; j < count; ++j) if (routes[i][j]) {
+                Warehouse* neighbor = warehouses.searchWarehouse(ids[j]);
+                if (neighbor) {
+                    if (found) cout << ", ";
+                    cout << neighbor->getName() << " [" << ids[j] << "]";
+                    found = true;
+                }
+            }
+            cout << (found ? "" : "(no active routes)") << '\n';
+        }
+    }
+    bool usesWarehouse(int id) const {
+        int i = indexOf(id);
+        if (i >= 0) for (int j = 0; j < count; ++j) if (routes[i][j]) return true;
+        for (Shipment* s = shipments; s; s = s->next) if (s->status != "Delivered")
+            for (int j = 0; j < s->length; ++j) if (s->path[j] == id) return true;
+        return false;
+    }
+    bool usesProduct(int id) const {
+        for (Shipment* s = shipments; s; s = s->next)
+            if (s->productId == id && s->status != "Delivered") return true;
+        return false;
+    }
+    int inTransitProductQuantity(int id) const {
+        int total = 0;
+        for (Shipment* s = shipments; s; s = s->next)
+            if (s->productId == id && s->status != "Delivered") total += s->quantity;
+        return total;
+    }
+    bool createShipment(int from, int to, int productId, int quantity) {
+        Product* p = inventory.searchProduct(productId);
+        Warehouse* origin = warehouses.searchWarehouse(from);
+        if (!p || !origin || !warehouses.searchWarehouse(to) ||
+            from == to || quantity <= 0) {
+            cout << "Shipment needs a catalog product, two different warehouses, "
+                    "and a positive quantity.\n";
+            return false;
+        }
+        Shipment* s = new Shipment();
+        if (!findPath(from, to, s->path, s->length)) {
+            delete s;
+            cout << "No route connects the origin and destination.\n";
+            return false;
+        }
+        if (origin->productQuantity(productId) < quantity) {
+            delete s;
+            cout << "The origin warehouse does not have enough stock.\n";
+            return false;
+        }
+        if (!origin->removeProduct(productId, quantity)) {
+            delete s;
+            return false;
+        }
+        s->id = nextId++;
+        s->productId = productId;
+        s->quantity = quantity;
+        s->next = shipments;
+        shipments = s;
+        cout << "Shipment " << s->id << " created and dispatched. Status: "
+             << s->status << ".\n";
+        return true;
+    }
+    bool advanceShipment(int id) {
+        Shipment* s = findShipment(id);
+        if (!s) {
+            cout << "Shipment not found.\n";
+            return false;
+        }
+        if (s->status == "Delivered") {
+            cout << "Shipment is already delivered.\n";
+            return false;
+        }
+        if (s->status == "Delayed") {
+            cout << "Resume the delayed shipment before moving it.\n";
+            return false;
+        }
+        int next = s->step + 1;
+        if (next == s->length - 1) {
+            Warehouse* destination = warehouses.searchWarehouse(s->path[next]);
+            Product* p = inventory.searchProduct(s->productId);
+            if (!destination || !p ||
+                !destination->canStoreProduct(s->productId, p->getName(), s->quantity)) {
+                cout << "Destination capacity check failed; shipment remains at its current stop.\n";
+                return false;
+            }
+            if (!destination->receiveProduct(s->productId, p->getName(), s->quantity)) {
+                cout << "Shipment delivery failed.\n";
+                return false;
+            }
+            s->status = "Delivered";
+        }
+        s->step = next;
+        Warehouse* current = warehouses.searchWarehouse(s->path[next]);
+        cout << "Shipment " << id << " moved to "
+             << (current ? current->getName() : "Unknown")
+             << ". Status: " << s->status << ".\n";
+        return true;
+    }
+    bool updateShipmentStatus(int id, bool delayed) {
+        Shipment* s = findShipment(id);
+        if (!s) {
+            cout << "Shipment not found.\n";
+            return false;
+        }
+        if (s->status == "Delivered") {
+            cout << "A delivered shipment cannot be rescheduled.\n";
+            return false;
+        }
+        s->status = delayed ? "Delayed" : "In Transit";
+        cout << "Shipment " << id << " status updated to " << s->status << ".\n";
+        return true;
+    }
+    void displayShipment(int id) const {
+        Shipment* s = findShipment(id);
+        if (!s) {
+            cout << "Shipment not found.\n";
+            return;
+        }
+        Product* p = inventory.searchProduct(s->productId);
+        cout << "Shipment " << id << " | Product: "
+             << (p ? p->getName() : "Unknown") << " [" << s->productId
+             << "] | Quantity: " << s->quantity << " | Status: " << s->status
+             << "\n  Movement: ";
+        for (int i = 0; i < s->length; ++i) {
+            Warehouse* w = warehouses.searchWarehouse(s->path[i]);
+            cout << (w ? w->getName() : "Unknown") << " [" << s->path[i] << "]";
+            if (i == s->step) cout << " (current)";
+            if (i + 1 < s->length) cout << " -> ";
+        }
+        cout << '\n';
+    }
+    void displayShipments() const {
+        if (!shipments) cout << "No shipments have been created.\n";
+        for (Shipment* s = shipments; s; s = s->next) displayShipment(s->id);
+    }
+};
