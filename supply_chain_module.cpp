@@ -9,6 +9,8 @@
 #endif
 
 #include <string>
+#include <limits>
+#include "person_d_support.h"
 using namespace std;
 
 struct Shipment {
@@ -86,6 +88,118 @@ public:
     }
     SupplyChainManager(const SupplyChainManager&) = delete;
     SupplyChainManager& operator=(const SupplyChainManager&) = delete;
+
+    int routeCount() const {
+        int total = 0;
+        for (int i = 0; i < count; ++i)
+            for (int j = i + 1; j < count; ++j)
+                if (routes[i][j]) ++total;
+        return total;
+    }
+    int shipmentCount() const {
+        int total = 0;
+        for (Shipment* s = shipments; s; s = s->next) ++total;
+        return total;
+    }
+    int shipmentCount(const string& status) const {
+        int total = 0;
+        for (Shipment* s = shipments; s; s = s->next)
+            if (s->status == status) ++total;
+        return total;
+    }
+    void saveState(ostream& output) const {
+        output << count << '\n';
+        for (int i = 0; i < count; ++i) output << ids[i] << '\n';
+        output << routeCount() << '\n';
+        for (int i = 0; i < count; ++i)
+            for (int j = i + 1; j < count; ++j)
+                if (routes[i][j]) output << ids[i] << ' ' << ids[j] << '\n';
+        output << shipmentCount() << '\n';
+        for (Shipment* s = shipments; s; s = s->next) {
+            output << s->id << ' ' << s->productId << ' ' << s->quantity << ' '
+                   << s->step << ' ' << s->length;
+            for (int i = 0; i < s->length; ++i) output << ' ' << s->path[i];
+            output << '\n';
+            PersonD::writeString(output, s->status);
+        }
+    }
+    bool loadState(istream& input) {
+        size_t vertexCount;
+        if (!PersonD::readCount(input, vertexCount) || vertexCount > LIMIT) return false;
+        for (size_t i = 0; i < vertexCount; ++i) {
+            int id;
+            if (!(input >> id) || id <= 0 || indexOf(id) >= 0 || addVertex(id) < 0)
+                return false;
+        }
+        size_t edgeCount;
+        if (!PersonD::readCount(input, edgeCount) ||
+            edgeCount > LIMIT * (LIMIT - 1) / 2) return false;
+        for (size_t i = 0; i < edgeCount; ++i) {
+            int from, to;
+            if (!(input >> from >> to) || from == to) return false;
+            int a = indexOf(from), b = indexOf(to);
+            if (a < 0 || b < 0 || routes[a][b] ||
+                !warehouses.searchWarehouse(from) || !warehouses.searchWarehouse(to))
+                return false;
+            routes[a][b] = routes[b][a] = true;
+        }
+        size_t shipmentTotal;
+        if (!PersonD::readCount(input, shipmentTotal)) return false;
+        int largestId = 0;
+        for (size_t i = 0; i < shipmentTotal; ++i) {
+            int id, productId, quantity, step, length;
+            if (!(input >> id >> productId >> quantity >> step >> length) ||
+                id <= 0 || productId <= 0 || quantity <= 0 || length < 2 ||
+                length > LIMIT || step < 0 || step >= length ||
+                id == numeric_limits<int>::max()) return false;
+            Shipment* shipment = new Shipment();
+            shipment->id = id;
+            shipment->productId = productId;
+            shipment->quantity = quantity;
+            shipment->step = step;
+            shipment->length = length;
+            for (int pathIndex = 0; pathIndex < length; ++pathIndex) {
+                if (!(input >> shipment->path[pathIndex]) || shipment->path[pathIndex] <= 0) {
+                    delete shipment;
+                    return false;
+                }
+            }
+            if (!PersonD::readString(input, shipment->status) ||
+                (shipment->status != "In Transit" && shipment->status != "Delayed" &&
+                 shipment->status != "Delivered") ||
+                (shipment->status == "Delivered" && step != length - 1) ||
+                (shipment->status != "Delivered" && step == length - 1) ||
+                findShipment(id)) {
+                delete shipment;
+                return false;
+            }
+            if (shipment->status != "Delivered") {
+                if (!inventory.searchProduct(productId)) {
+                    delete shipment;
+                    return false;
+                }
+                for (int pathIndex = 0; pathIndex < length; ++pathIndex) {
+                    if (!warehouses.searchWarehouse(shipment->path[pathIndex])) {
+                        delete shipment;
+                        return false;
+                    }
+                    if (pathIndex > 0) {
+                        int previous = indexOf(shipment->path[pathIndex - 1]);
+                        int current = indexOf(shipment->path[pathIndex]);
+                        if (previous < 0 || current < 0 || !routes[previous][current]) {
+                            delete shipment;
+                            return false;
+                        }
+                    }
+                }
+            }
+            shipment->next = shipments;
+            shipments = shipment;
+            if (id > largestId) largestId = id;
+        }
+        nextId = largestId + 1;
+        return static_cast<bool>(input);
+    }
 
     bool addRoute(int from, int to) {
         Warehouse* a = warehouses.searchWarehouse(from);
@@ -184,6 +298,10 @@ public:
         return total;
     }
     bool createShipment(int from, int to, int productId, int quantity) {
+        if (nextId == numeric_limits<int>::max()) {
+            cout << "Shipment ID limit reached.\n";
+            return false;
+        }
         Product* p = inventory.searchProduct(productId);
         Warehouse* origin = warehouses.searchWarehouse(from);
         if (!p || !origin || !warehouses.searchWarehouse(to) ||

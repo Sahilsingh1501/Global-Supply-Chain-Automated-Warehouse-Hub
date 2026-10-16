@@ -1,7 +1,9 @@
 #include <iostream>
 #include <limits>
+#include <cmath>
 #include <sstream>
 #include <string>
+#include "person_d_support.h"
 using namespace std;
 class Product {
 private:
@@ -52,7 +54,7 @@ istream& operator>>(istream& input, Product& product) {
     if (!(idInput >> idValue) || (idInput >> trailing) ||
         !(priceInput >> priceValue) || (priceInput >> trailing) ||
         !(quantityInput >> quantityValue) || (quantityInput >> trailing) ||
-        idValue <= 0 || priceValue < 0 || quantityValue < 0) {
+        idValue <= 0 || !(priceValue >= 0) || !std::isfinite(priceValue) || quantityValue < 0) {
         input.setstate(ios::failbit);
         return input;
     }
@@ -96,6 +98,52 @@ public:
     }
     InventoryManager(const InventoryManager&) = delete;
     InventoryManager& operator=(const InventoryManager&) = delete;
+    size_t productCount() const {
+        size_t total = 0;
+        for (int i = 0; i < TABLE_SIZE; ++i)
+            for (ProductNode* current = buckets[i]; current; current = current->next)
+                ++total;
+        return total;
+    }
+    double totalStockValue() const {
+        double total = 0;
+        for (int i = 0; i < TABLE_SIZE; ++i)
+            for (ProductNode* current = buckets[i]; current; current = current->next)
+                total += current->product.getPrice() * current->product.getQuantity();
+        return total;
+    }
+    template <typename Callback>
+    void forEachProduct(Callback callback) const {
+        for (int i = 0; i < TABLE_SIZE; ++i)
+            for (ProductNode* current = buckets[i]; current; current = current->next)
+                callback(current->product);
+    }
+    void saveState(ostream& output) const {
+        output << productCount() << '\n' << setprecision(17);
+        for (int i = 0; i < TABLE_SIZE; ++i) {
+            for (ProductNode* current = buckets[i]; current; current = current->next) {
+                const Product& product = current->product;
+                output << product.getId() << ' ' << product.getPrice() << ' '
+                       << product.getQuantity() << '\n';
+                PersonD::writeString(output, product.getName());
+            }
+        }
+    }
+    bool loadState(istream& input) {
+        size_t count;
+        if (!PersonD::readCount(input, count)) return false;
+        for (size_t i = 0; i < count; ++i) {
+            int id, quantity;
+            double price;
+            string name;
+            if (!(input >> id >> price >> quantity) || id <= 0 || quantity < 0 ||
+                !(price >= 0) || !std::isfinite(price) ||
+                !PersonD::readString(input, name) || name.empty() ||
+                name.find('|') != string::npos ||
+                !addProduct(Product(id, name, price, quantity))) return false;
+        }
+        return static_cast<bool>(input);
+    }
     bool addProduct(const Product& product) {
         const int bucket = getBucket(product.getId());
         for (ProductNode* current = buckets[bucket]; current; current = current->next) {
@@ -117,6 +165,12 @@ public:
                 return &current->product;
             }
         }
+        return nullptr;
+    }
+    const Product* searchProduct(int id) const {
+        if (id <= 0) return nullptr;
+        for (ProductNode* current = buckets[getBucket(id)]; current; current = current->next)
+            if (current->product.getId() == id) return &current->product;
         return nullptr;
     }
     bool deleteProduct(int id) {

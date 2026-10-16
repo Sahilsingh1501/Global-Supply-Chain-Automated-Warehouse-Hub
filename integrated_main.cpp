@@ -5,9 +5,52 @@
 #include "warehouse_module.cpp"
 
 #include "supply_chain_module.cpp"
+#include "person_d_persistence.h"
+
+void recordChange(PersonD::AuditLog& audit, const SystemPersistence& persistence,
+                  const InventoryManager& inventory, const WarehouseManager& warehouses,
+                  const SupplyChainManager& supplyChain, const string& action,
+                  const string& details) {
+    if (!audit.record(action, details))
+        cout << "Warning: this change was not recorded in the audit log.\n";
+    string error;
+    if (!persistence.save(inventory, warehouses, supplyChain, error))
+        cout << "Save error: " << error << "\nThe change remains in memory for this run.\n";
+}
+
+bool allocatedStockIsValid(const InventoryManager& inventory,
+                           const WarehouseManager& warehouses,
+                           const SupplyChainManager& supplyChain) {
+    bool valid = true;
+    inventory.forEachProduct([&](const Product& product) {
+        if (product.getQuantity() < warehouses.storedProductQuantity(product.getId()) +
+                                   supplyChain.inTransitProductQuantity(product.getId()))
+            valid = false;
+    });
+    return valid;
+}
+
+void displaySystemReport(const InventoryManager& inventory,
+                         const WarehouseManager& warehouses,
+                         const SupplyChainManager& supplyChain) {
+    ostringstream stockValue;
+    stockValue << fixed << setprecision(2) << inventory.totalStockValue();
+    cout << "\n--- System Operations Report ---\n"
+         << "Catalog products: " << inventory.productCount() << '\n'
+         << "Catalog stock value: $" << stockValue.str() << '\n'
+         << "Warehouses: " << warehouses.warehouseCount() << '\n'
+         << "Warehouse capacity used: " << warehouses.totalUsedCapacity()
+         << " / " << warehouses.totalCapacity() << " units\n"
+         << "Active routes: " << supplyChain.routeCount() << '\n'
+         << "Shipments: " << supplyChain.shipmentCount()
+         << " (in transit: " << supplyChain.shipmentCount("In Transit")
+         << ", delayed: " << supplyChain.shipmentCount("Delayed")
+         << ", delivered: " << supplyChain.shipmentCount("Delivered") << ")\n";
+}
 
 void runInventoryManager(InventoryManager& inventory, const WarehouseManager& warehouses,
-                         const SupplyChainManager& supplyChain) {
+                         const SupplyChainManager& supplyChain, PersonD::AuditLog& audit,
+                         const SystemPersistence& persistence) {
     int choice = -1;
     while (choice != 0) {
         cout << "\n--- Inventory Manager (Person A) ---\n"
@@ -33,6 +76,8 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
             } else if (inventory.addProduct(product)) {
                 cout << "Product added successfully.\n";
+                recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                             "PRODUCT_ADDED", "Product ID " + to_string(product.getId()));
             } else {
                 cout << "That product ID already exists.\n";
             }
@@ -43,6 +88,8 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                 cout << "Cannot delete a product that is stored or in an active shipment.\n";
             } else if (inventory.deleteProduct(id)) {
                 cout << "Product deleted successfully.\n";
+                recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                             "PRODUCT_DELETED", "Product ID " + to_string(id));
             } else {
                 cout << "Product not found.\n";
             }
@@ -64,6 +111,10 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                 } else {
                     product->setQuantity(quantity);
                     cout << "Stock updated successfully.\n";
+                    recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                                 "PRODUCT_STOCK_UPDATED",
+                                 "Product ID " + to_string(id) + ", quantity " +
+                                 to_string(quantity));
                 }
             }
         } else if (choice == 4) {
@@ -87,7 +138,8 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
 }
 
 void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& inventory,
-                         SupplyChainManager& supplyChain) {
+                         SupplyChainManager& supplyChain, PersonD::AuditLog& audit,
+                         const SystemPersistence& persistence) {
     int choice = -1;
     while (choice != 0) {
         cout << "\n--- Warehouse Manager (Person B) ---\n"
@@ -119,6 +171,9 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                 cout << "A warehouse with that ID already exists.\n";
             } else {
                 cout << "Warehouse added successfully.\n";
+                recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                             "WAREHOUSE_ADDED",
+                             "Warehouse ID " + to_string(id) + " (" + name + ")");
             }
         } else if (choice == 2) {
             int id;
@@ -127,6 +182,8 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                 cout << "Remove its routes and finish its active shipments before deleting it.\n";
             } else if (warehouses.deleteWarehouse(id)) {
                 cout << "Warehouse deleted successfully.\n";
+                recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                             "WAREHOUSE_DELETED", "Warehouse ID " + to_string(id));
             }
         } else if (choice == 3) {
             int id;
@@ -160,7 +217,14 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                                   supplyChain.inTransitProductQuantity(productId)) {
                 cout << "The requested quantity exceeds total catalog stock not already stored or in transit.\n";
             } else {
+                int previousQuantity = warehouse->productQuantity(productId);
                 warehouse->addProduct(productId, product->getName(), quantity);
+                if (warehouse->productQuantity(productId) == previousQuantity + quantity)
+                    recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                                 "WAREHOUSE_STOCK_ADDED",
+                                 "Warehouse ID " + to_string(warehouseId) +
+                                 ", product ID " + to_string(productId) +
+                                 ", quantity " + to_string(quantity));
             }
         } else if (choice == 6) {
             int warehouseId;
@@ -172,7 +236,12 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
             Warehouse* warehouse = warehouses.searchWarehouse(warehouseId);
             if (!warehouse) cout << "Warehouse not found.\n";
             else if (quantity <= 0) cout << "Quantity must be greater than zero.\n";
-            else warehouse->removeProduct(productId, quantity);
+            else if (warehouse->removeProduct(productId, quantity))
+                recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                             "WAREHOUSE_STOCK_REMOVED",
+                             "Warehouse ID " + to_string(warehouseId) +
+                             ", product ID " + to_string(productId) +
+                             ", quantity " + to_string(quantity));
         } else if (choice == 7) {
             warehouses.displayCapacityReport();
         } else if (choice != 0) {
@@ -181,7 +250,9 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
     }
 }
 
-void runSupplyChainManager(SupplyChainManager& supplyChain) {
+void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManager& inventory,
+                           const WarehouseManager& warehouses, PersonD::AuditLog& audit,
+                           const SystemPersistence& persistence) {
     int choice = -1;
     while (choice != 0) {
         cout << "\n--- Supply Chain Manager (Person C) ---\n"
@@ -206,9 +277,19 @@ void runSupplyChainManager(SupplyChainManager& supplyChain) {
             int toId;
             if (!readInteger("Origin warehouse ID: ", fromId) ||
                 !readInteger("Destination warehouse ID: ", toId)) continue;
-            if (choice == 1) supplyChain.addRoute(fromId, toId);
-            else if (choice == 2) supplyChain.removeRoute(fromId, toId);
-            else supplyChain.findAndDisplayRoute(fromId, toId);
+            if (choice == 1) {
+                if (supplyChain.addRoute(fromId, toId))
+                    recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                                 "ROUTE_ADDED",
+                                 to_string(fromId) + " -> " + to_string(toId));
+            } else if (choice == 2) {
+                if (supplyChain.removeRoute(fromId, toId))
+                    recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                                 "ROUTE_REMOVED",
+                                 to_string(fromId) + " -> " + to_string(toId));
+            } else {
+                supplyChain.findAndDisplayRoute(fromId, toId);
+            }
         } else if (choice == 3) {
             supplyChain.displayRoutes();
         } else if (choice == 5) {
@@ -220,15 +301,25 @@ void runSupplyChainManager(SupplyChainManager& supplyChain) {
                 !readInteger("Destination warehouse ID: ", destinationId) ||
                 !readInteger("Product ID: ", productId) ||
                 !readInteger("Shipment quantity: ", quantity)) continue;
-            supplyChain.createShipment(originId, destinationId, productId, quantity);
+            if (supplyChain.createShipment(originId, destinationId, productId, quantity))
+                recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                             "SHIPMENT_CREATED",
+                             "Origin " + to_string(originId) + ", destination " +
+                             to_string(destinationId) + ", product " +
+                             to_string(productId) + ", quantity " + to_string(quantity));
         } else if (choice == 6) {
             int shipmentId;
-            if (readInteger("Shipment ID to move: ", shipmentId))
-                supplyChain.advanceShipment(shipmentId);
+            if (readInteger("Shipment ID to move: ", shipmentId) &&
+                supplyChain.advanceShipment(shipmentId))
+                recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                             "SHIPMENT_MOVED", "Shipment ID " + to_string(shipmentId));
         } else if (choice == 7 || choice == 8) {
             int shipmentId;
-            if (readInteger("Shipment ID: ", shipmentId))
-                supplyChain.updateShipmentStatus(shipmentId, choice == 7);
+            if (readInteger("Shipment ID: ", shipmentId) &&
+                supplyChain.updateShipmentStatus(shipmentId, choice == 7))
+                recordChange(audit, persistence, inventory, warehouses, supplyChain,
+                             choice == 7 ? "SHIPMENT_DELAYED" : "SHIPMENT_RESUMED",
+                             "Shipment ID " + to_string(shipmentId));
         } else if (choice == 9) {
             int shipmentId;
             if (readInteger("Shipment ID to track: ", shipmentId))
@@ -241,10 +332,44 @@ void runSupplyChainManager(SupplyChainManager& supplyChain) {
     }
 }
 
-int main() {
+void displayAuditLog() {
+    ifstream input("audit.log");
+    if (!input) {
+        cout << "Could not open audit.log.\n";
+        return;
+    }
+    cout << "\n--- Audit Log ---\n";
+    string line;
+    bool found = false;
+    while (getline(input, line)) {
+        cout << line << '\n';
+        found = true;
+    }
+    if (!input.eof()) cout << "Error while reading audit.log.\n";
+    else if (!found) cout << "No audit events have been recorded.\n";
+}
+
+int runSystem() {
     InventoryManager inventory;
     WarehouseManager warehouses;
     SupplyChainManager supplyChain(warehouses, inventory);
+    PersonD::AuditLog audit;
+    if (!audit.isOpen()) {
+        cerr << "Startup error: cannot open audit.log for appending.\n";
+        return 1;
+    }
+    SystemPersistence persistence;
+    string error;
+    if (!persistence.load(inventory, warehouses, supplyChain, error)) {
+        cerr << "Startup error: " << error << '\n';
+        return 1;
+    }
+    if (!allocatedStockIsValid(inventory, warehouses, supplyChain)) {
+        cerr << "Startup error: saved catalog stock is lower than the amount stored or in transit.\n";
+        return 1;
+    }
+    if (!audit.record("SYSTEM_STARTED", "Application started"))
+        return 1;
     int choice = -1;
 
     while (choice != 0) {
@@ -255,28 +380,47 @@ int main() {
              << "2. Warehouse Manager (Person B)\n"
              << "3. Supply Chain Manager (Person C)\n"
              << "4. Display inventory and warehouses\n"
-             << "0. Save & exit (data currently in memory only)\n";
+             << "5. Display operations report\n"
+             << "6. Display audit log\n"
+             << "0. Save & exit\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) break;
             continue;
         }
         if (choice == 1) {
-            runInventoryManager(inventory, warehouses, supplyChain);
+            runInventoryManager(inventory, warehouses, supplyChain, audit, persistence);
         } else if (choice == 2) {
-            runWarehouseManager(warehouses, inventory, supplyChain);
+            runWarehouseManager(warehouses, inventory, supplyChain, audit, persistence);
         } else if (choice == 3) {
-            runSupplyChainManager(supplyChain);
+            runSupplyChainManager(supplyChain, inventory, warehouses, audit, persistence);
         } else if (choice == 4) {
             inventory.displayProducts();
             warehouses.displayWarehouses();
             warehouses.displayCapacityReport();
             supplyChain.displayRoutes();
             supplyChain.displayShipments();
+        } else if (choice == 5) {
+            displaySystemReport(inventory, warehouses, supplyChain);
+        } else if (choice == 6) {
+            displayAuditLog();
         } else if (choice == 0) {
-            cout << "Exiting. Role D's file persistence is not implemented yet.\n";
+            audit.record("SYSTEM_STOPPED", "Application shut down");
+            if (persistence.save(inventory, warehouses, supplyChain, error))
+                cout << "Data saved to warehouse_system.dat. Goodbye.\n";
+            else
+                cerr << "Save error: " << error << '\n';
         } else {
             cout << "Invalid choice. Select an option from the menu.\n";
         }
     }
     return 0;
+}
+
+int main() {
+    try {
+        return runSystem();
+    } catch (const exception& error) {
+        cerr << "Fatal application error: " << error.what() << '\n';
+        return 1;
+    }
 }

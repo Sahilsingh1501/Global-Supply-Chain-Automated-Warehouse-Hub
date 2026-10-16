@@ -1,6 +1,12 @@
+#ifndef INVENTORY_MODULE_NO_MAIN
+#define INVENTORY_MODULE_NO_MAIN
+#include "main.cpp"
+#endif
+
 #include <iostream>
 #include <limits>
 #include <string>
+#include "person_d_support.h"
 using namespace std;
 struct StoredProduct {
     int id;
@@ -59,6 +65,21 @@ public:
             if (current->id == productId) return current->quantity;
         }
         return 0;
+    }
+    size_t storedProductCount() const {
+        size_t count = 0;
+        for (StoredProduct* current = products; current; current = current->next) ++count;
+        return count;
+    }
+    void saveState(ostream& output) const {
+        output << id << ' ' << capacity << '\n';
+        PersonD::writeString(output, name);
+        PersonD::writeString(output, location);
+        output << storedProductCount() << '\n';
+        for (StoredProduct* current = products; current; current = current->next) {
+            output << current->id << ' ' << current->quantity << '\n';
+            PersonD::writeString(output, current->name);
+        }
     }
 
     bool canStoreProduct(int productId, const string& productName, int quantity) const {
@@ -232,6 +253,23 @@ private:
                storedProductQuantity(node->left, productId) +
                storedProductQuantity(node->right, productId);
     }
+    size_t warehouseCount(WarehouseNode* node) const {
+        return node ? 1 + warehouseCount(node->left) + warehouseCount(node->right) : 0;
+    }
+    long long totalCapacity(WarehouseNode* node) const {
+        return node ? node->warehouse.getCapacity() +
+                      totalCapacity(node->left) + totalCapacity(node->right) : 0;
+    }
+    long long totalUsedCapacity(WarehouseNode* node) const {
+        return node ? node->warehouse.getUsedCapacity() +
+                      totalUsedCapacity(node->left) + totalUsedCapacity(node->right) : 0;
+    }
+    void saveStateInOrder(WarehouseNode* node, ostream& output) const {
+        if (!node) return;
+        saveStateInOrder(node->left, output);
+        node->warehouse.saveState(output);
+        saveStateInOrder(node->right, output);
+    }
     void displayInOrder(WarehouseNode* node) const {
         if (!node) return;
         displayInOrder(node->left);
@@ -255,6 +293,38 @@ public:
         bool added = false;
         root = insert(root, id, name, location, capacity, added);
         return added;
+    }
+    size_t warehouseCount() const { return warehouseCount(root); }
+    long long totalCapacity() const { return totalCapacity(root); }
+    long long totalUsedCapacity() const { return totalUsedCapacity(root); }
+    void saveState(ostream& output) const {
+        output << warehouseCount() << '\n';
+        saveStateInOrder(root, output);
+    }
+    bool loadState(istream& input, const InventoryManager& inventory) {
+        size_t count;
+        if (!PersonD::readCount(input, count)) return false;
+        for (size_t i = 0; i < count; ++i) {
+            int id, capacity;
+            string name, location;
+            size_t productCount;
+            if (!(input >> id >> capacity) || id <= 0 || capacity <= 0 ||
+                !PersonD::readString(input, name) || name.empty() ||
+                !PersonD::readString(input, location) || location.empty() ||
+                !PersonD::readCount(input, productCount) ||
+                !addWarehouse(id, name, location, capacity)) return false;
+            Warehouse* warehouse = searchWarehouse(id);
+            for (size_t p = 0; p < productCount; ++p) {
+                int productId, quantity;
+                string productName;
+                if (!(input >> productId >> quantity) || productId <= 0 || quantity <= 0 ||
+                    !PersonD::readString(input, productName)) return false;
+                const Product* catalogProduct = inventory.searchProduct(productId);
+                if (!catalogProduct || catalogProduct->getName() != productName ||
+                    !warehouse->receiveProduct(productId, productName, quantity)) return false;
+            }
+        }
+        return static_cast<bool>(input);
     }
     bool deleteWarehouse(int id) {
         WarehouseNode* target = findNode(id);
