@@ -8,7 +8,7 @@ The project has a single integrated console application for Persons A, B, C, and
 - `warehouse_module.cpp` (Person B): warehouses stored in a binary search tree ordered by warehouse ID. Supports adding, deleting, displaying, and storing inventory products. Products must first be added in Inventory Manager.
 - `supply_chain_module.cpp` (Person C): warehouse routes represented by a graph, BFS route finding, route add/remove, shipment creation and tracking, shipment status updates, and step-by-step movement. Dispatch removes stock from the origin; delivery adds it to the destination, subject to its capacity.
 - `integrated_main.cpp`: connects all three modules under one main menu. It prevents deleting inventory products that are stored in a warehouse, deleting warehouses referenced by routes or active shipments, and removing routes required by active shipments.
-- Person D integration: saves inventory, warehouse stock, routes, and shipment progress to a versioned snapshot; appends successful changes to an audit log; and validates saved data on startup.
+- Person D integration: saves inventory, warehouse stock, routes, and shipment progress to a versioned snapshot and validates saved data on startup.
 
 The standalone Person A and Person B programs remain available. The integrated system automatically restores its last saved state and writes successful changes immediately, so data persists when the application exits.
 
@@ -16,7 +16,7 @@ The standalone Person A and Person B programs remain available. The integrated s
 
 Double-click `run_project.bat` and choose **Start system**. The launcher builds and starts the integrated application, where inventory, warehouse, and supply-chain operations share the same data. A C++ compiler must be installed and available on `PATH`.
 
-The integrated application stores its current snapshot in `warehouse_system.dat` and its append-only event history in `audit.log` in the project folder. Keep these files together with the application to preserve system data. The main menu provides a view of the audit log.
+The integrated application stores its current snapshot in `warehouse_system.dat` in the project folder. Keep this file with the application to preserve system data.
 
 The integrated application can also be built directly:
 

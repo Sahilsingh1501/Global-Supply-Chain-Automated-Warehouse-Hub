@@ -7,12 +7,9 @@
 #include "supply_chain_module.cpp"
 #include "person_d_persistence.h"
 
-void recordChange(PersonD::AuditLog& audit, const SystemPersistence& persistence,
-                  const InventoryManager& inventory, const WarehouseManager& warehouses,
-                  const SupplyChainManager& supplyChain, const string& action,
-                  const string& details) {
-    if (!audit.record(action, details))
-        cout << "Warning: this change was not recorded in the audit log.\n";
+void saveChanges(const SystemPersistence& persistence, const InventoryManager& inventory,
+                 const WarehouseManager& warehouses,
+                 const SupplyChainManager& supplyChain) {
     string error;
     if (!persistence.save(inventory, warehouses, supplyChain, error))
         cout << "Save error: " << error << "\nThe change remains in memory for this run.\n";
@@ -31,7 +28,7 @@ bool allocatedStockIsValid(const InventoryManager& inventory,
 }
 
 void runInventoryManager(InventoryManager& inventory, const WarehouseManager& warehouses,
-                         const SupplyChainManager& supplyChain, PersonD::AuditLog& audit,
+                         const SupplyChainManager& supplyChain,
                          const SystemPersistence& persistence) {
     int choice = -1;
     while (choice != 0) {
@@ -56,8 +53,7 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
             } else if (inventory.addProduct(product)) {
                 cout << "Product added successfully.\n";
-                recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                             "PRODUCT_ADDED", "Product ID " + to_string(product.getId()));
+                saveChanges(persistence, inventory, warehouses, supplyChain);
             } else {
                 cout << "That product ID already exists.\n";
             }
@@ -68,8 +64,7 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                 cout << "Cannot delete a product that is stored or in an active shipment.\n";
             } else if (inventory.deleteProduct(id)) {
                 cout << "Product deleted successfully.\n";
-                recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                             "PRODUCT_DELETED", "Product ID " + to_string(id));
+                saveChanges(persistence, inventory, warehouses, supplyChain);
             } else {
                 cout << "Product not found.\n";
             }
@@ -91,10 +86,7 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                 } else {
                     product->setQuantity(quantity);
                     cout << "Stock updated successfully.\n";
-                    recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                                 "PRODUCT_STOCK_UPDATED",
-                                 "Product ID " + to_string(id) + ", quantity " +
-                                 to_string(quantity));
+                    saveChanges(persistence, inventory, warehouses, supplyChain);
                 }
             }
         } else if (choice == 4) {
@@ -106,7 +98,7 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
 }
 
 void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& inventory,
-                         SupplyChainManager& supplyChain, PersonD::AuditLog& audit,
+                         SupplyChainManager& supplyChain,
                          const SystemPersistence& persistence) {
     int choice = -1;
     while (choice != 0) {
@@ -136,9 +128,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                 cout << "A warehouse with that ID already exists.\n";
             } else {
                 cout << "Warehouse added successfully.\n";
-                recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                             "WAREHOUSE_ADDED",
-                             "Warehouse ID " + to_string(id) + " (" + name + ")");
+                saveChanges(persistence, inventory, warehouses, supplyChain);
             }
         } else if (choice == 2) {
             int id;
@@ -147,8 +137,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                 cout << "Remove its routes and finish its active shipments before deleting it.\n";
             } else if (warehouses.deleteWarehouse(id)) {
                 cout << "Warehouse deleted successfully.\n";
-                recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                             "WAREHOUSE_DELETED", "Warehouse ID " + to_string(id));
+                saveChanges(persistence, inventory, warehouses, supplyChain);
             }
         } else if (choice == 3) {
             warehouses.displayWarehouses();
@@ -179,11 +168,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                 int previousQuantity = warehouse->productQuantity(productId);
                 warehouse->addProduct(productId, product->getName(), quantity);
                 if (warehouse->productQuantity(productId) == previousQuantity + quantity)
-                    recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                                 "WAREHOUSE_STOCK_ADDED",
-                                 "Warehouse ID " + to_string(warehouseId) +
-                                 ", product ID " + to_string(productId) +
-                                 ", quantity " + to_string(quantity));
+                    saveChanges(persistence, inventory, warehouses, supplyChain);
             }
         } else if (choice != 0) {
             cout << "Invalid choice. Select an option from the menu.\n";
@@ -192,7 +177,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
 }
 
 void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManager& inventory,
-                           const WarehouseManager& warehouses, PersonD::AuditLog& audit,
+                           const WarehouseManager& warehouses,
                            const SystemPersistence& persistence) {
     int choice = -1;
     while (choice != 0) {
@@ -220,14 +205,10 @@ void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManag
                 !readInteger("Destination warehouse ID: ", toId)) continue;
             if (choice == 1) {
                 if (supplyChain.addRoute(fromId, toId))
-                    recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                                 "ROUTE_ADDED",
-                                 to_string(fromId) + " -> " + to_string(toId));
+                    saveChanges(persistence, inventory, warehouses, supplyChain);
             } else if (choice == 2) {
                 if (supplyChain.removeRoute(fromId, toId))
-                    recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                                 "ROUTE_REMOVED",
-                                 to_string(fromId) + " -> " + to_string(toId));
+                    saveChanges(persistence, inventory, warehouses, supplyChain);
             } else {
                 supplyChain.findAndDisplayRoute(fromId, toId);
             }
@@ -243,24 +224,17 @@ void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManag
                 !readInteger("Product ID: ", productId) ||
                 !readInteger("Shipment quantity: ", quantity)) continue;
             if (supplyChain.createShipment(originId, destinationId, productId, quantity))
-                recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                             "SHIPMENT_CREATED",
-                             "Origin " + to_string(originId) + ", destination " +
-                             to_string(destinationId) + ", product " +
-                             to_string(productId) + ", quantity " + to_string(quantity));
+                saveChanges(persistence, inventory, warehouses, supplyChain);
         } else if (choice == 6) {
             int shipmentId;
             if (readInteger("Shipment ID to move: ", shipmentId) &&
                 supplyChain.advanceShipment(shipmentId))
-                recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                             "SHIPMENT_MOVED", "Shipment ID " + to_string(shipmentId));
+                saveChanges(persistence, inventory, warehouses, supplyChain);
         } else if (choice == 7 || choice == 8) {
             int shipmentId;
             if (readInteger("Shipment ID: ", shipmentId) &&
                 supplyChain.updateShipmentStatus(shipmentId, choice == 7))
-                recordChange(audit, persistence, inventory, warehouses, supplyChain,
-                             choice == 7 ? "SHIPMENT_DELAYED" : "SHIPMENT_RESUMED",
-                             "Shipment ID " + to_string(shipmentId));
+                saveChanges(persistence, inventory, warehouses, supplyChain);
         } else if (choice == 9) {
             int shipmentId;
             if (readInteger("Shipment ID to track: ", shipmentId))
@@ -273,32 +247,10 @@ void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManag
     }
 }
 
-void displayAuditLog() {
-    ifstream input("audit.log");
-    if (!input) {
-        cout << "Could not open audit.log.\n";
-        return;
-    }
-    cout << "\n--- Audit Log ---\n";
-    string line;
-    bool found = false;
-    while (getline(input, line)) {
-        cout << line << '\n';
-        found = true;
-    }
-    if (!input.eof()) cout << "Error while reading audit.log.\n";
-    else if (!found) cout << "No audit events have been recorded.\n";
-}
-
 int runSystem() {
     InventoryManager inventory;
     WarehouseManager warehouses;
     SupplyChainManager supplyChain(warehouses, inventory);
-    PersonD::AuditLog audit;
-    if (!audit.isOpen()) {
-        cerr << "Startup error: cannot open audit.log for appending.\n";
-        return 1;
-    }
     SystemPersistence persistence;
     string error;
     if (!persistence.load(inventory, warehouses, supplyChain, error)) {
@@ -309,8 +261,6 @@ int runSystem() {
         cerr << "Startup error: saved inventory stock is lower than the amount stored or in transit.\n";
         return 1;
     }
-    if (!audit.record("SYSTEM_STARTED", "Application started"))
-        return 1;
     int choice = -1;
 
     while (choice != 0) {
@@ -321,27 +271,23 @@ int runSystem() {
              << "2. Warehouse Manager\n"
              << "3. Supply Chain Manager\n"
              << "4. Display inventory and warehouses\n"
-             << "5. Display audit log\n"
              << "0. Save & exit\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) break;
             continue;
         }
         if (choice == 1) {
-            runInventoryManager(inventory, warehouses, supplyChain, audit, persistence);
+            runInventoryManager(inventory, warehouses, supplyChain, persistence);
         } else if (choice == 2) {
-            runWarehouseManager(warehouses, inventory, supplyChain, audit, persistence);
+            runWarehouseManager(warehouses, inventory, supplyChain, persistence);
         } else if (choice == 3) {
-            runSupplyChainManager(supplyChain, inventory, warehouses, audit, persistence);
+            runSupplyChainManager(supplyChain, inventory, warehouses, persistence);
         } else if (choice == 4) {
             inventory.displayProducts();
             warehouses.displayWarehouses();
             supplyChain.displayRoutes();
             supplyChain.displayShipments();
-        } else if (choice == 5) {
-            displayAuditLog();
         } else if (choice == 0) {
-            audit.record("SYSTEM_STOPPED", "Application shut down");
             if (persistence.save(inventory, warehouses, supplyChain, error))
                 cout << "Data saved to warehouse_system.dat. Goodbye.\n";
             else
