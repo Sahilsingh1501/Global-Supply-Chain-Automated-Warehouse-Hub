@@ -53,7 +53,7 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                          const SystemPersistence& persistence) {
     int choice = -1;
     while (choice != 0) {
-        cout << "\n--- Inventory Manager (Person A) ---\n"
+        cout << "\n--- Inventory Manager  ---\n"
              << "1. Add product\n"
              << "2. Delete product\n"
              << "3. Update product stock\n"
@@ -142,7 +142,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                          const SystemPersistence& persistence) {
     int choice = -1;
     while (choice != 0) {
-        cout << "\n--- Warehouse Manager (Person B) ---\n"
+        cout << "\n--- Warehouse Manager ---\n"
              << "1. Add warehouse\n"
              << "2. Delete warehouse\n"
              << "3. Search warehouse\n"
@@ -255,7 +255,7 @@ void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManag
                            const SystemPersistence& persistence) {
     int choice = -1;
     while (choice != 0) {
-        cout << "\n--- Supply Chain Manager (Person C) ---\n"
+        cout << "\n--- Supply Chain Manager  ---\n"
              << "1. Add route\n"
              << "2. Remove route\n"
              << "3. Display connected warehouses\n"
@@ -376,9 +376,9 @@ int runSystem() {
         cout << "\n===========================================\n"
              << " Global Supply Chain and Warehouse System\n"
              << "===========================================\n"
-             << "1. Inventory Manager (Person A)\n"
-             << "2. Warehouse Manager (Person B)\n"
-             << "3. Supply Chain Manager (Person C)\n"
+             << "1. Inventory Manager\n"
+             << "2. Warehouse Manager\n"
+             << "3. Supply Chain Manager\n"
              << "4. Display inventory and warehouses\n"
              << "5. Display operations report\n"
              << "6. Display audit log\n"
