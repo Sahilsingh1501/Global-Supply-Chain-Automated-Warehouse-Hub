@@ -413,4 +413,29 @@ public:
         if (!shipments) cout << "No shipments have been created yet.\n";
         for (Shipment* s = shipments; s; s = s->next) displayShipment(s->id);
     }
+
+    // --- NEW: Global Product Search ---
+    void globalProductSearch(int productId, const string& productName) const {
+        warehouses.searchProductAcrossWarehouses(productId, productName);
+    }
+
+    // --- NEW: SKU / Aisle Locator ---
+    void skuLocator(int warehouseId, int productId) const {
+        Warehouse* w = warehouses.searchWarehouse(warehouseId);
+        if (!w) {
+            cout << "Warehouse not found.\n";
+            return;
+        }
+        int qty = w->productQuantity(productId);
+        int aisle   = (productId % 8) + 1;
+        int section = (warehouseId % 5) + 1;
+        int shelf   = (productId / 10) % 6 + 1;
+        cout << "\n--- SKU Locator ---\n"
+             << "Warehouse : " << w->getName() << " [ID:" << warehouseId << "]\n"
+             << "Product ID: " << productId << "\n"
+             << "Location  : Aisle A" << aisle
+             << ", Section S" << section
+             << ", Shelf " << shelf << "\n"
+             << "Stock here: " << qty << " unit(s)\n";
+    }
 };

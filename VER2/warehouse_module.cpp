@@ -174,6 +174,45 @@ public:
                  << " | Quantity: " << current->quantity << '\n';
         }
     }
+
+    // --- NEW: case-insensitive name contains check ---
+    bool nameContains(const string& keyword) const {
+        string lname = name, lkey = keyword;
+        for (size_t i = 0; i < lname.size(); ++i)
+            lname[i] = (char)tolower((unsigned char)lname[i]);
+        for (size_t i = 0; i < lkey.size(); ++i)
+            lkey[i] = (char)tolower((unsigned char)lkey[i]);
+        return lname.find(lkey) != string::npos;
+    }
+
+    // --- NEW: display sorted inventory (descending by quantity) ---
+    void displaySortedInventory() const {
+        struct PEntry { int id; string name; int qty; };
+        PEntry arr[200];
+        int n = 0;
+        for (StoredProduct* cur = products; cur && n < 200; cur = cur->next) {
+            arr[n].id  = cur->id;
+            arr[n].name = cur->name;
+            arr[n].qty = cur->quantity;
+            ++n;
+        }
+        // Insertion sort descending by quantity
+        for (int i = 1; i < n; ++i) {
+            PEntry key = arr[i];
+            int j = i - 1;
+            while (j >= 0 && arr[j].qty < key.qty) {
+                arr[j + 1] = arr[j];
+                --j;
+            }
+            arr[j + 1] = key;
+        }
+        cout << "  Sorted Inventory (highest stock first):\n";
+        if (n == 0) { cout << "    (empty)\n"; return; }
+        for (int i = 0; i < n; ++i)
+            cout << "    Product ID: " << arr[i].id
+                 << " | Name: " << arr[i].name
+                 << " | Qty: " << arr[i].qty << '\n';
+    }
 };
 struct WarehouseNode {
     Warehouse warehouse;
@@ -267,6 +306,33 @@ private:
         node->warehouse.display();
         displayInOrder(node->right);
     }
+
+    // --- NEW HELPERS ---
+    void searchByNameHelper(WarehouseNode* node, const string& keyword, int& found) const {
+        if (!node) return;
+        searchByNameHelper(node->left, keyword, found);
+        if (node->warehouse.nameContains(keyword)) {
+            node->warehouse.display();
+            ++found;
+        }
+        searchByNameHelper(node->right, keyword, found);
+    }
+
+    void searchProductHelper(WarehouseNode* node, int productId,
+                             int& foundCount, int& totalQty) const {
+        if (!node) return;
+        searchProductHelper(node->left, productId, foundCount, totalQty);
+        int qty = node->warehouse.productQuantity(productId);
+        if (qty > 0) {
+            cout << "  Warehouse: " << node->warehouse.getName()
+                 << " [ID:" << node->warehouse.getId() << "]"
+                 << " | Quantity: " << qty << '\n';
+            ++foundCount;
+            totalQty += qty;
+        }
+        searchProductHelper(node->right, productId, foundCount, totalQty);
+    }
+
 public:
     WarehouseManager() : root(nullptr) {}
     ~WarehouseManager() { destroy(root); }
@@ -338,6 +404,31 @@ public:
         }
         cout << "\n--- Warehouses ---\n";
         displayInOrder(root);
+    }
+
+    // --- NEW PUBLIC METHODS ---
+    void searchByName(const string& keyword) const {
+        int found = 0;
+        searchByNameHelper(root, keyword, found);
+        if (found == 0) cout << "No warehouses match \"" << keyword << "\".\n";
+        else cout << found << " warehouse(s) found.\n";
+    }
+
+    void searchProductAcrossWarehouses(int productId, const string& productName) const {
+        cout << "\n--- Global Product Search: " << productName
+             << " [ID:" << productId << "] ---\n";
+        int foundCount = 0, totalQty = 0;
+        searchProductHelper(root, productId, foundCount, totalQty);
+        if (foundCount == 0) cout << "  Product not found in any warehouse.\n";
+        else cout << "  Found in " << foundCount << " warehouse(s). Total network qty: "
+                  << totalQty << '\n';
+    }
+
+    void displaySortedInventoryForWarehouse(int id) const {
+        WarehouseNode* node = findNode(id);
+        if (!node) { cout << "Warehouse not found.\n"; return; }
+        cout << "\n--- Sorted Inventory: " << node->warehouse.getName() << " ---\n";
+        node->warehouse.displaySortedInventory();
     }
 };
 bool warehouseReadInteger(const string& prompt, int& value) {
