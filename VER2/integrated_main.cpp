@@ -1,5 +1,5 @@
 #define INVENTORY_MODULE_NO_MAIN
-#include "main.cpp"
+#include "inventory_module.cpp"
 
 #define WAREHOUSE_MODULE_NO_MAIN
 #include "warehouse_module.cpp"
