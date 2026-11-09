@@ -59,8 +59,8 @@ public:
             error = "Saved data is incomplete or has an invalid ending marker.";
             return false;
         }
-        input >> std::ws;
-        if (!input.eof()) {
+        char extra;
+        if (input >> extra) {
             error = "Saved data contains unexpected content after the ending marker.";
             return false;
         }

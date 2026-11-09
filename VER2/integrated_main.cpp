@@ -606,6 +606,7 @@ int runSystem() {
     return 0;
 }
 
+#ifndef INTEGRATED_MAIN_NO_MAIN
 int main() {
     try {
         return runSystem();
@@ -614,3 +615,4 @@ int main() {
         return 1;
     }
 }
+#endif

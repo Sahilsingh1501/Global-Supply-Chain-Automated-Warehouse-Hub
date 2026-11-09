@@ -175,9 +175,9 @@ public:
         }
     }
 
-    // --- NEW: case-insensitive name contains check ---
+    // --- NEW: case-insensitive name / location contains check ---
     bool nameContains(const string& keyword) const {
-        string lname = name, lkey = keyword;
+        string lname = name + " " + location, lkey = keyword;
         for (size_t i = 0; i < lname.size(); ++i)
             lname[i] = (char)tolower((unsigned char)lname[i]);
         for (size_t i = 0; i < lkey.size(); ++i)
