@@ -11,21 +11,10 @@ echo =========================================
 echo   Global Supply Chain System
 echo =========================================
 echo 1. Start system
-echo 2. Run automated test suite
 echo Q. Quit
-choice /c 12Q /n /m "Choose an option: "
-if errorlevel 3 goto done
-if errorlevel 2 goto test_suite
+choice /c 1Q /n /m "Choose an option: "
+if errorlevel 2 goto done
 if errorlevel 1 goto integrated
-
-:test_suite
-echo.
-echo Building and running test suite...
-g++ -std=c++11 -Wall -Wextra -pedantic run_tests.cpp -o run_tests.exe
-if errorlevel 1 goto build_failed
-run_tests.exe
-pause
-goto menu
 
 :integrated
 echo.
