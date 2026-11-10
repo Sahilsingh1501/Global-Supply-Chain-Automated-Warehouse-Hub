@@ -68,6 +68,12 @@ public:
         if (!s) return false;
         s->contact = contact; s->rating = rating; return true;
     }
+    template <typename Callback>
+    void forEachSupplier(Callback callback) const {
+        for (Supplier* supplier = head; supplier; supplier = supplier->next) {
+            callback(*supplier);
+        }
+    }
     void displayAll() const {
         if (!head) { cout << "No suppliers registered.\n"; return; }
         cout << "\n--- Suppliers ---\n";
@@ -542,26 +548,43 @@ void runSupplierManager(SupplierManager& suppliers) {
 }
 
 // ===== MAIN SYSTEM =====
-int runSystem() {
+struct AppState {
     InventoryManager inventory;
     WarehouseManager warehouses;
-    SupplyChainManager supplyChain(warehouses, inventory);
+    SupplyChainManager supplyChain;
     SystemPersistence persistence;
     SupplierManager suppliers;
 
-    suppliers.loadFromFile();
+    AppState() : supplyChain(warehouses, inventory) {}
+};
 
-    string error;
-    if (!persistence.load(inventory, warehouses, supplyChain, error)) {
-        cerr << "Startup error: " << error << '\n';
+int loadApp(AppState& app, string& error) {
+    app.suppliers.loadFromFile();
+    if (!app.persistence.load(app.inventory, app.warehouses, app.supplyChain, error))
+        return 1;
+    if (!allocatedStockIsValid(app.inventory, app.warehouses, app.supplyChain)) {
+        error = "saved inventory stock is less than amount stored or in transit.";
         return 1;
     }
-    if (!allocatedStockIsValid(inventory, warehouses, supplyChain)) {
-        cerr << "Startup error: saved inventory stock is less than amount stored or in transit.\n";
+    return 0;
+}
+
+#include "web_api.h"
+
+int runSystem() {
+    AppState app;
+    string error;
+    if (loadApp(app, error) != 0) {
+        cerr << "Startup error: " << error << '\n';
         return 1;
     }
 
     auditLog("SYSTEM_STARTED", "Application started");
+    InventoryManager& inventory = app.inventory;
+    WarehouseManager& warehouses = app.warehouses;
+    SupplyChainManager& supplyChain = app.supplyChain;
+    SystemPersistence& persistence = app.persistence;
+    SupplierManager& suppliers = app.suppliers;
 
     int choice = -1;
     while (choice != 0) {

@@ -102,6 +102,20 @@ public:
         }
         return total;
     }
+    template <typename Callback>
+    void forEachRoute(Callback callback) const {
+        for (int i = 0; i < count; ++i) {
+            for (int j = i + 1; j < count; ++j) {
+                if (routes[i][j]) callback(ids[i], ids[j]);
+            }
+        }
+    }
+    template <typename Callback>
+    void forEachShipment(Callback callback) const {
+        for (Shipment* shipment = shipments; shipment; shipment = shipment->next) {
+            callback(*shipment);
+        }
+    }
     int shipmentCount() const {
         int total = 0;
         for (Shipment* s = shipments; s; s = s->next) {

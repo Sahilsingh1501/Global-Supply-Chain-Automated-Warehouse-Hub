@@ -16,3 +16,22 @@ SUPPLY CHAIN REPORT -- 2026-11-09 21:39:44
   Total shipments: 1
 
 [END OF REPORT]
+
+========================================
+SUPPLY CHAIN REPORT -- 2026-11-10 19:55:51
+========================================
+
+[LOW STOCK ALERTS -- qty < 10]
+  ALERT: Monitor [ID:104] qty=8
+
+[INVENTORY SUMMARY]
+  Laptop [ID:101] catalog=500 stored=30 in-transit=0
+  Book [ID:202] catalog=70 stored=70 in-transit=0
+  Mouse [ID:102] catalog=100 stored=70 in-transit=0
+  Keyboard [ID:103] catalog=60 stored=30 in-transit=0
+  Monitor [ID:104] catalog=8 stored=5 in-transit=0
+
+[SHIPMENT SUMMARY]
+  Total shipments: 2
+
+[END OF REPORT]

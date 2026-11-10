@@ -157,6 +157,12 @@ public:
         cout << "Product removed from the warehouse.\n";
         return true;
     }
+    template <typename Callback>
+    void forEachStoredProduct(Callback callback) const {
+        for (StoredProduct* current = products; current; current = current->next) {
+            callback(current->id, current->name, current->quantity);
+        }
+    }
     void display() const {
         cout << "Warehouse ID: " << id
              << " | Name: " << name
@@ -306,6 +312,13 @@ private:
         node->warehouse.display();
         displayInOrder(node->right);
     }
+    template <typename Callback>
+    void forEachWarehouseVisit(WarehouseNode* node, Callback& callback) const {
+        if (!node) return;
+        forEachWarehouseVisit(node->left, callback);
+        callback(node->warehouse);
+        forEachWarehouseVisit(node->right, callback);
+    }
 
     // --- NEW HELPERS ---
     void searchByNameHelper(WarehouseNode* node, const string& keyword, int& found) const {
@@ -396,6 +409,10 @@ public:
     }
     int storedProductQuantity(int productId) const {
         return storedProductQuantity(root, productId);
+    }
+    template <typename Callback>
+    void forEachWarehouse(Callback callback) const {
+        forEachWarehouseVisit(root, callback);
     }
     void displayWarehouses() const {
         if (!root) {

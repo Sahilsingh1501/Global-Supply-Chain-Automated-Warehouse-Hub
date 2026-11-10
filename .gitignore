@@ -1,0 +1,32 @@
+# Ignore all root-level project files and folders by default
+/*
+!README.md
+!.gitignore
+!/VER1
+!/VER2
+/VER2/**
+!/VER2/**.cpp
+!/VER2/**.h
+!/VER2/**.hpp
+!/VER2/**.txt
+!/VER2/**.md
+!/VER2/**.bat
+!/VER2/web/
+!/VER2/web/**
+
+# Rules for VER1: track code, data, and docs only
+/VER1/**
+!/VER1/**.cpp
+!/VER1/**.txt
+!/VER1/**.md
+
+# Ignore binaries and editor artifacts
+*.exe
+*.o
+*.obj
+*.dll
+*.so
+*.out
+*.app
+.vscode/
+.idea/

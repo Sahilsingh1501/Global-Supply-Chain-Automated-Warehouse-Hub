@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Supply Chain Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="atmosphere" aria-hidden="true"></div>
+    <header class="dock">
+        <div class="brand">
+            <span class="mark">SC</span>
+            <div>
+                <strong>Supply Chain Hub</strong>
+                <em>Local operations desk</em>
+            </div>
+        </div>
+        <nav>
+            <button type="button" data-view="overview" class="active">Overview</button>
+            <button type="button" data-view="inventory">Inventory</button>
+            <button type="button" data-view="warehouses">Warehouses</button>
+            <button type="button" data-view="supply">Supply chain</button>
+            <button type="button" data-view="suppliers">Suppliers</button>
+            <button type="button" data-view="reports">Reports</button>
+            <button type="button" data-view="audit">Audit log</button>
+        </nav>
+        <div class="top-actions">
+            <span id="connection" class="pill">Connecting</span>
+            <button type="button" id="refresh" class="ghost">Refresh</button>
+        </div>
+    </header>
+    <main>
+        <div class="quick" id="quick-actions">
+            <button type="button" data-view="inventory"><span>01</span> Add inventory</button>
+            <button type="button" data-view="warehouses"><span>02</span> Store stock</button>
+            <button type="button" data-view="supply"><span>03</span> Move a shipment</button>
+            <button type="button" data-view="reports"><span>04</span> Run analytics</button>
+        </div>
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Global supply chain and warehouse system</p>
+                    <h1 id="view-title">Overview</h1>
+                </div>
+                <p class="save-note">Successful changes are written to this folder immediately.</p>
+            </header>
+            <p id="banner" class="banner" hidden></p>
+
+            <section id="view-overview">
+                <div class="stats" id="stats"></div>
+                <div class="split">
+                    <article class="panel">
+                        <h2>Low stock</h2>
+                        <div id="low-stock"></div>
+                    </article>
+                    <article class="panel">
+                        <h2>Active shipments</h2>
+                        <div id="active-shipments"></div>
+                    </article>
+                </div>
+            </section>
+
+            <section id="view-inventory" hidden>
+                <form id="product-form" class="panel form-grid">
+                    <h2>Add product</h2>
+                    <label>ID <input id="product-id" type="number" min="1" required></label>
+                    <label>Name <input id="product-name" type="text" required></label>
+                    <label>Price <input id="product-price" type="number" min="0" step="0.01" required></label>
+                    <label>Quantity <input id="product-qty" type="number" min="0" required></label>
+                    <button type="submit">Add product</button>
+                </form>
+                <div class="panel">
+                    <h2>Catalog</h2>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Price</th>
+                                    <th>Catalog</th>
+                                    <th>Stored</th>
+                                    <th>In transit</th>
+                                    <th>Available</th>
+                                    <th>New stock</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="product-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-warehouses" hidden>
+                <form id="warehouse-form" class="panel form-grid">
+                    <h2>Add warehouse</h2>
+                    <label>ID <input id="warehouse-id" type="number" min="1" required></label>
+                    <label>Name <input id="warehouse-name" type="text" required></label>
+                    <label>Location <input id="warehouse-location" type="text" required></label>
+                    <label>Capacity <input id="warehouse-capacity" type="number" min="1" required></label>
+                    <button type="submit">Add warehouse</button>
+                </form>
+                <div class="split">
+                    <form id="store-form" class="panel form-stack">
+                        <h2>Store stock</h2>
+                        <label>Warehouse <select id="store-warehouse" required></select></label>
+                        <label>Product <select id="store-product" required></select></label>
+                        <label>Quantity <input id="store-qty" type="number" min="1" required></label>
+                        <button type="submit">Store</button>
+                    </form>
+                    <form id="remove-form" class="panel form-stack">
+                        <h2>Remove stock</h2>
+                        <label>Warehouse <select id="remove-warehouse" required></select></label>
+                        <label>Product <select id="remove-product" required></select></label>
+                        <label>Quantity <input id="remove-qty" type="number" min="1" required></label>
+                        <button type="submit" class="danger">Remove</button>
+                    </form>
+                </div>
+                <div class="panel tools">
+                    <label>Find warehouse <input id="warehouse-search" type="search" placeholder="Name or location"></label>
+                    <label>SKU warehouse <select id="sku-warehouse"></select></label>
+                    <label>SKU product <select id="sku-product"></select></label>
+                    <p id="sku-result" class="locator">Choose a warehouse and product to see the aisle location.</p>
+                </div>
+                <div id="warehouse-cards" class="cards"></div>
+            </section>
+
+            <section id="view-supply" hidden>
+                <div class="split">
+                    <form id="route-form" class="panel form-stack">
+                        <h2>Add route</h2>
+                        <label>Origin <select id="route-from" required></select></label>
+                        <label>Destination <select id="route-to" required></select></label>
+                        <div class="row-actions">
+                            <button type="submit">Add route</button>
+                            <button type="button" id="remove-route" class="danger">Remove route</button>
+                        </div>
+                    </form>
+                    <form id="find-form" class="panel form-stack">
+                        <h2>Find a route</h2>
+                        <label>Origin <select id="find-from" required></select></label>
+                        <label>Destination <select id="find-to" required></select></label>
+                        <button type="submit">Find route</button>
+                        <p id="route-result" class="locator">The path found by the system will appear here.</p>
+                    </form>
+                </div>
+                <form id="shipment-form" class="panel form-grid">
+                    <h2>Create shipment</h2>
+                    <label>Origin <select id="ship-from" required></select></label>
+                    <label>Destination <select id="ship-to" required></select></label>
+                    <label>Product <select id="ship-product" required></select></label>
+                    <label>Quantity <input id="ship-qty" type="number" min="1" required></label>
+                    <button type="submit">Create shipment</button>
+                </form>
+                <article class="panel">
+                    <h2>Routes</h2>
+                    <div id="route-list"></div>
+                </article>
+                <article class="panel">
+                    <h2>Shipments</h2>
+                    <div id="shipment-list" class="stack"></div>
+                </article>
+            </section>
+
+            <section id="view-suppliers" hidden>
+                <form id="supplier-form" class="panel form-grid">
+                    <h2>Add supplier</h2>
+                    <label>ID <input id="supplier-id" type="number" required></label>
+                    <label>Name <input id="supplier-name" type="text" required></label>
+                    <label>Contact <input id="supplier-contact" type="text" required></label>
+                    <label>Rating <input id="supplier-rating" type="number" min="0" max="5" step="0.1" value="5" required></label>
+                    <button type="submit">Add supplier</button>
+                </form>
+                <div id="supplier-list" class="cards"></div>
+            </section>
+
+            <section id="view-reports" hidden>
+                <article class="panel">
+                    <h2>Reports and analytics</h2>
+                    <p class="lede">Generate the same low-stock, inventory, and shipment report the console writes to report.txt.</p>
+                    <button type="button" id="generate-report">Generate report</button>
+                    <pre id="report-output">No report generated in this session yet.</pre>
+                </article>
+            </section>
+
+            <section id="view-audit" hidden>
+                <article class="panel">
+                    <div class="panel-head">
+                        <h2>Audit log</h2>
+                        <button type="button" id="reload-audit" class="ghost">Reload</button>
+                    </div>
+                    <ol id="audit-list" class="audit"></ol>
+                </article>
+            </section>
+        </main>
+    <script src="app.js"></script>
+</body>
+</html>
