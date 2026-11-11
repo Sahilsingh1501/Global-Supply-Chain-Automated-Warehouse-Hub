@@ -1613,7 +1613,7 @@ class Application {
             const json body = parseBody(request);
             const int from = parseId(getString(body, "fromWarehouseId", "", 40), "Origin warehouse ID");
             const int to = parseId(getString(body, "toWarehouseId", "", 40), "Destination warehouse ID");
-            const int distance = getInteger(body, "distanceKm", 0, 0, 1000000);
+            const int distance = getInteger(body, "distanceKm", -1, 1, 1000000);
             const int hours = getInteger(body, "transitHours", -1, 1, 1000000);
             if (from == to) throw ApiError(400, "A route must connect two different warehouses.");
             if (!warehouses.searchWarehouse(from) || !warehouses.searchWarehouse(to))
@@ -1647,7 +1647,7 @@ class Application {
             if (!route) route = findRoute(from, to);
             if (!route) throw ApiError(404, "Route not found.");
             const json body = parseBody(request);
-            const int distance = getInteger(body, "distanceKm", route->distanceKm, 0, 1000000);
+            const int distance = getInteger(body, "distanceKm", route->distanceKm, 1, 1000000);
             const int hours = getInteger(body, "transitHours", route->transitHours, 1, 1000000);
             const bool active = getBoolean(body, "active", route->active);
             if (active && !route->active) {

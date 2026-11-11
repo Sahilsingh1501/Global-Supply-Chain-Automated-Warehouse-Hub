@@ -161,7 +161,7 @@ export default function App() {
       ], (data) => request("/suppliers", { method: "POST", body: JSON.stringify(data) }));
     } else if (target === "orders") {
       const supplierOptions = suppliers.map((supplier) => ({ value: text(supplier.id), label: text(supplier.name) }));
-      formModal("Create a purchase order", "Place an order with a supplier and choose where it will arrive.", [
+      formModal("Create a purchase order", "Choose a supplier, product, quantity, and receiving warehouse. Stock increases when you record the delivery.", [
         { name: "supplierId", label: "Supplier", type: "select", required: true, options: supplierOptions },
         { name: "warehouseId", label: "Deliver to", type: "select", required: true, options: warehouseOptions },
         { name: "productId", label: "Product", type: "select", required: true, options: productOptions },
@@ -172,7 +172,7 @@ export default function App() {
       formModal("Add a shipping lane", "Connect two warehouses to enable shipments.", [
         { name: "fromWarehouseId", label: "Origin warehouse", type: "select", required: true, options: warehouseOptions },
         { name: "toWarehouseId", label: "Destination warehouse", type: "select", required: true, options: warehouseOptions },
-        { name: "distanceKm", label: "Distance (km)", type: "number", required: true },
+        { name: "distanceKm", label: "Distance (km)", type: "number", required: true, min: 1 },
         { name: "transitHours", label: "Transit time (hours)", type: "number", required: true },
       ], (data) => request("/routes", { method: "POST", body: JSON.stringify({ ...data, distanceKm: Number(data.distanceKm), transitHours: Number(data.transitHours) }) }));
     } else if (target === "shipments") {
@@ -280,7 +280,7 @@ export default function App() {
               });
             } else if (section === "routes" && action === "edit") {
               formModal("Manage shipping lane", `${text((row.fromWarehouse as Row | undefined)?.name)} to ${text((row.toWarehouse as Row | undefined)?.name)}.`, [
-                { name: "distanceKm", label: "Distance (km)", type: "number", required: true, min: 0 },
+                { name: "distanceKm", label: "Distance (km)", type: "number", required: true, min: 1 },
                 { name: "transitHours", label: "Transit time (hours)", type: "number", required: true },
                 { name: "active", label: "Route status", type: "select", required: true, options: [{ value: "true", label: "Active" }, { value: "false", label: "Paused" }] },
               ], (data) => request(`/routes/${text(row.id)}`, { method: "PATCH", body: JSON.stringify({ distanceKm: Number(data.distanceKm), transitHours: Number(data.transitHours), active: data.active === "true" }) }), {
@@ -406,9 +406,18 @@ function ModuleView({ section, rows, loading, search, canWrite, canCreate, userR
       { label: "STATUS", value: (r) => <StatusBadge status={number(r.totalQuantity) <= number(r.reorderLevel) ? "LOW STOCK" : "HEALTHY"} /> },
       { label: "LOCATIONS", value: (r) => <span className="location-list">{toRows(r.stock).filter((s) => number(s.quantity) > 0).map((s) => text((s.warehouse as Row | undefined)?.code)).join(", ") || "Not stocked"}</span> },
     ] },
-    warehouses: { title: "Warehouses", subtitle: "Your fulfillment locations and available storage capacity.", icon: Building2, create: "Add warehouse", columns: [
+    warehouses: { title: "Warehouses", subtitle: "See each fulfillment location, its on-hand products, and available storage capacity.", icon: Building2, create: "Add warehouse", columns: [
       { label: "LOCATION", value: (r) => <div className="product-cell"><span className="warehouse-avatar"><Building2 size={16} /></span><span><strong>{text(r.name)}</strong><small>{text(r.code)} · {text(r.address)}</small></span></div> },
       { label: "CITY", value: (r) => text(r.city) },
+      { label: "ON-HAND ITEMS", value: (r) => {
+        const stock = toRows(r.stock).filter((item) => number(item.quantity) > 0);
+        return stock.length
+          ? <span className="warehouse-stock">{stock.map((item) => {
+            const product = item.product as Row | undefined;
+            return <span key={text(item.productId)}><strong>{text(product?.name)}</strong> · {number(item.quantity).toLocaleString()} {text(product?.unit, "pcs")}</span>;
+          })}</span>
+          : <span className="warehouse-stock-empty">No stock recorded</span>;
+      } },
       { label: "CAPACITY", value: (r) => <div className="capacity-cell"><span>{number(r.usedCapacity).toLocaleString()} <small>/ {number(r.capacity).toLocaleString()} units</small></span><span className="capacity-track"><i style={{ width: `${Math.min(100, Math.round(number(r.usedCapacity) / Math.max(1, number(r.capacity)) * 100))}%` }} /></span></div> },
       { label: "NETWORK", value: (r) => <span className="network-count"><Route size={14} /> {number((r._count as Row | undefined)?.outboundRoutes)} outbound lanes</span> },
     ] },
@@ -430,7 +439,7 @@ function ModuleView({ section, rows, loading, search, canWrite, canCreate, userR
       { label: "FROM", value: (r) => <div><strong>{text((r.fromWarehouse as Row | undefined)?.name)}</strong><small className="sub-cell">{text((r.fromWarehouse as Row | undefined)?.city)}</small></div> },
       { label: "", value: () => <ArrowRight className="route-arrow" size={18} /> },
       { label: "TO", value: (r) => <div><strong>{text((r.toWarehouse as Row | undefined)?.name)}</strong><small className="sub-cell">{text((r.toWarehouse as Row | undefined)?.city)}</small></div> },
-      { label: "DISTANCE", value: (r) => `${number(r.distanceKm).toLocaleString()} km` },
+      { label: "DISTANCE", value: (r) => number(r.distanceKm) > 0 ? `${number(r.distanceKm).toLocaleString()} km` : "Not set" },
       { label: "TRANSIT TIME", value: (r) => `${number(r.transitHours)} hours` },
       { label: "STATUS", value: (r) => <StatusBadge status={r.active ? "ACTIVE" : "PAUSED"} /> },
     ] },
@@ -475,6 +484,8 @@ function ModuleView({ section, rows, loading, search, canWrite, canCreate, userR
       })}{!loading && !filtered.length && <tr><td colSpan={current.columns.length + 1}><EmptyState icon={Icon} title={filterText ? "No matching records" : `No ${current.title.toLowerCase()} yet`} text={filterText ? "Try a different search term." : current.create ? "Add your first record to get started." : "Your data will appear here as you use the system."} /></td></tr>}</tbody></table>{loading && <div className="table-loading"><Skeleton className="table-skeleton" /><Skeleton className="table-skeleton" /><Skeleton className="table-skeleton" /></div>}</div>
       <div className="table-footer"><span>Showing <strong>{loading ? "—" : filtered.length}</strong> of <strong>{rows.length}</strong> records</span><span className="table-page">Page 1 <ChevronDown size={13} /></span></div>
     </section>
+    {section === "orders" && <div className="report-note"><ArrowDownLeft size={16} /><span>Receiving an order adds the delivered quantity to the warehouse selected on that order. Partial deliveries are supported.</span></div>}
+    {section === "routes" && <div className="report-note"><Route size={16} /><span>“Not set” means this route has no recorded distance. Use <strong>Manage</strong> to enter the actual lane distance and transit time.</span></div>}
     {section === "shipments" && <div className="shipment-help"><div className="shipment-help-icon"><Truck size={18} /></div><span><strong>How shipment tracking works</strong><small>Advance a shipment to its next stop. When it reaches its destination, inventory is received automatically.</small></span><ArrowRight size={16} /></div>}
     {section === "reports" && <div className="report-note"><FileBarChart2 size={16} /><span>Inventory is calculated from recorded movements. Use <strong>Stock movement</strong> in Inventory to keep quantities accurate.</span></div>}
     {section === "team" && userRole === "ADMIN" && <div className="report-note"><ShieldCheck size={16} /><span>For security, invite only teammates who need access. Roles determine which actions they can take.</span></div>}
