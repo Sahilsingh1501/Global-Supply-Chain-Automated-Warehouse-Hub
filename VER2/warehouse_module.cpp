@@ -41,6 +41,9 @@ public:
     const string& getLocation() const { return location; }
     int getCapacity() const { return capacity; }
     int getUsedCapacity() const { return usedCapacity; }
+    void setCapacity(int value) { capacity = value; }
+    void setName(const string& value) { name = value; }
+    void setLocation(const string& value) { location = value; }
     bool isEmpty() const { return products == nullptr; }
     void swap(Warehouse& other) {
         using std::swap;
@@ -69,6 +72,12 @@ public:
         size_t count = 0;
         for (StoredProduct* current = products; current; current = current->next) ++count;
         return count;
+    }
+    template <typename Callback>
+    void forEachStoredProduct(Callback callback) const {
+        for (StoredProduct* current = products; current; current = current->next) {
+            callback(current->id, current->name, current->quantity);
+        }
     }
     void saveState(ostream& output) const {
         output << id << ' ' << capacity << '\n';
@@ -184,6 +193,13 @@ struct WarehouseNode {
 };
 class WarehouseManager {
 private:
+    template <typename Callback>
+    void forEachWarehouseInOrder(WarehouseNode* node, Callback callback) const {
+        if (!node) return;
+        forEachWarehouseInOrder(node->left, callback);
+        callback(node->warehouse);
+        forEachWarehouseInOrder(node->right, callback);
+    }
     WarehouseNode* root;
     WarehouseNode* findNode(int id) const {
         WarehouseNode* current = root;
@@ -269,7 +285,11 @@ private:
     }
 public:
     WarehouseManager() : root(nullptr) {}
-    ~WarehouseManager() { destroy(root); }
+    void clear() {
+        destroy(root);
+        root = nullptr;
+    }
+    ~WarehouseManager() { clear(); }
     WarehouseManager(const WarehouseManager&) = delete;
     WarehouseManager& operator=(const WarehouseManager&) = delete;
     bool addWarehouse(int id, const string& name, const string& location, int capacity) {
@@ -278,11 +298,16 @@ public:
         return added;
     }
     size_t warehouseCount() const { return warehouseCount(root); }
+    template <typename Callback>
+    void forEachWarehouse(Callback callback) const {
+        forEachWarehouseInOrder(root, callback);
+    }
     void saveState(ostream& output) const {
         output << warehouseCount() << '\n';
         saveStateInOrder(root, output);
     }
     bool loadState(istream& input, const InventoryManager& inventory) {
+        clear();
         size_t count;
         if (!PersonD::readCount(input, count)) return false;
         for (size_t i = 0; i < count; ++i) {
@@ -322,6 +347,10 @@ public:
         return removed;
     }
     Warehouse* searchWarehouse(int id) {
+        WarehouseNode* node = findNode(id);
+        return node ? &node->warehouse : nullptr;
+    }
+    const Warehouse* searchWarehouse(int id) const {
         WarehouseNode* node = findNode(id);
         return node ? &node->warehouse : nullptr;
     }

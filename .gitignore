@@ -1,0 +1,5 @@
+*.exe
+*.obj
+/VER2/audit.log
+/VER2/warehouse_system.dat
+/VER2/warehouse_web_state.json

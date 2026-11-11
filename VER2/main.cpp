@@ -19,6 +19,8 @@ public:
     const string& getName() const { return name; }
     double getPrice() const { return price; }
     int getQuantity() const { return quantity; }
+    void setName(const string& value) { name = value; }
+    void setPrice(double value) { price = value; }
     void setQuantity(int stock) { quantity = stock; }
 
     friend istream& operator>>(istream& input, Product& product);
@@ -87,7 +89,7 @@ public:
             buckets[i] = nullptr;
         }
     }
-    ~InventoryManager() {
+    void clear() {
         for (int i = 0; i < TABLE_SIZE; ++i) {
             while (buckets[i]) {
                 ProductNode* next = buckets[i]->next;
@@ -95,6 +97,9 @@ public:
                 buckets[i] = next;
             }
         }
+    }
+    ~InventoryManager() {
+        clear();
     }
     InventoryManager(const InventoryManager&) = delete;
     InventoryManager& operator=(const InventoryManager&) = delete;
@@ -127,6 +132,7 @@ public:
         }
     }
     bool loadState(istream& input) {
+        clear();
         size_t count;
         if (!PersonD::readCount(input, count)) return false;
         for (size_t i = 0; i < count; ++i) {

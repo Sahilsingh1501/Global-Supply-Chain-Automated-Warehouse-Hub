@@ -78,17 +78,26 @@ class SupplyChainManager {
     }
 
 public:
+    void clear() {
+        while (shipments) {
+            Shipment* next = shipments->next;
+            delete shipments;
+            shipments = next;
+        }
+        count = 0;
+        nextId = 1;
+        for (int r = 0; r < LIMIT; ++r) {
+            ids[r] = 0;
+            for (int c = 0; c < LIMIT; ++c) routes[r][c] = false;
+        }
+    }
     SupplyChainManager(WarehouseManager& w, InventoryManager& i)
         : warehouses(w), inventory(i), count(0), nextId(1), shipments(nullptr) {
         for (int r = 0; r < LIMIT; ++r)
             for (int c = 0; c < LIMIT; ++c) routes[r][c] = false;
     }
     ~SupplyChainManager() {
-        while (shipments) {
-            Shipment* next = shipments->next;
-            delete shipments;
-            shipments = next;
-        }
+        clear();
     }
     SupplyChainManager(const SupplyChainManager&) = delete;
     SupplyChainManager& operator=(const SupplyChainManager&) = delete;
@@ -108,6 +117,23 @@ public:
             ++total;
         }
         return total;
+    }
+    int nextShipmentId() const { return nextId; }
+    Shipment* getShipment(int id) { return findShipment(id); }
+    const Shipment* getShipment(int id) const { return findShipment(id); }
+    template <typename Callback>
+    void forEachRoute(Callback callback) const {
+        for (int i = 0; i < count; ++i) {
+            for (int j = i + 1; j < count; ++j) {
+                if (routes[i][j]) callback(ids[i], ids[j]);
+            }
+        }
+    }
+    template <typename Callback>
+    void forEachShipment(Callback callback) const {
+        for (Shipment* shipment = shipments; shipment; shipment = shipment->next) {
+            callback(*shipment);
+        }
     }
     void saveState(ostream& output) const {
         output << count << '\n';
@@ -130,6 +156,7 @@ public:
         }
     }
     bool loadState(istream& input) {
+        clear();
         size_t vertexCount;
         if (!PersonD::readCount(input, vertexCount) || vertexCount > LIMIT) return false;
         for (size_t i = 0; i < vertexCount; ++i) {
