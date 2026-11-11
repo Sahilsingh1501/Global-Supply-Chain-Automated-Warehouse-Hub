@@ -7,7 +7,7 @@
 #endif
 
 #define INVENTORY_MODULE_NO_MAIN
-#include "../../VER2/main.cpp"
+#include "../../VER2/inventory_module.cpp"
 #define WAREHOUSE_MODULE_NO_MAIN
 #include "../../VER2/warehouse_module.cpp"
 #define SUPPLY_CHAIN_MODULE_NO_MAIN

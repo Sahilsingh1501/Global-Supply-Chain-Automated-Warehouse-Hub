@@ -1,6 +1,6 @@
 #ifndef INVENTORY_MODULE_NO_MAIN
 #define INVENTORY_MODULE_NO_MAIN
-#include "main.cpp"
+#include "inventory_module.cpp"
 #endif
 
 #ifndef WAREHOUSE_MODULE_NO_MAIN
