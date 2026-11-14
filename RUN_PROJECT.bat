@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title Northstar Supply Chain Hub
+title StockSathi
 
 set "WEBAPP_DIR=%~dp0webapp"
 if not exist "%WEBAPP_DIR%\package.json" (
@@ -64,13 +64,24 @@ echo Starting the C++ backend and website...
 echo A second window will show backend and website startup messages.
 echo Please wait while the website starts...
 echo Website port: %VITE_PORT%
-start "Northstar Supply Chain Hub - Server" /D "%WEBAPP_DIR%" "%WEBAPP_DIR%\scripts\run-dev.bat"
+start "StockSathi - Server" /D "%WEBAPP_DIR%" "%WEBAPP_DIR%\scripts\run-dev.bat"
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$port = [int]$env:VITE_PORT; $deadline = (Get-Date).AddSeconds(40); while ((Get-Date) -lt $deadline) { $client = New-Object System.Net.Sockets.TcpClient; try { $client.Connect('127.0.0.1', $port); $client.Close(); exit 0 } catch { Start-Sleep -Milliseconds 500 } }; exit 1"
 if errorlevel 1 (
     echo.
     echo The website did not start at http://localhost:%VITE_PORT% within 40 seconds.
     echo Check the second window for startup errors.
+    pause
+    exit /b 1
+)
+
+echo Waiting for the C++ API...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$deadline = (Get-Date).AddSeconds(40); while ((Get-Date) -lt $deadline) { try { $health = Invoke-RestMethod -Uri 'http://127.0.0.1:4000/api/health' -TimeoutSec 2; if ($health.status -eq 'ok') { exit 0 } } catch { }; Start-Sleep -Milliseconds 500 }; exit 1"
+if errorlevel 1 (
+    echo.
+    echo The C++ API did not become ready at http://127.0.0.1:4000/api/health.
+    echo Check the second window for API startup errors.
+    echo If Windows Security blocked gsc-server.exe, review Protection history.
     pause
     exit /b 1
 )

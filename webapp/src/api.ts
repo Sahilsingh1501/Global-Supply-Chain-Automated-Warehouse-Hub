@@ -12,14 +12,24 @@ export function clearSession() {
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const response = await fetch(`/api${path}`, {
-    ...options,
-    headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      ...options,
+      headers: {
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(
+        "Could not reach the local API. Keep the launcher windows open and check the API window. If Windows Security blocked gsc-server.exe, review Protection history.",
+      );
+    }
+    throw error;
+  }
   if (response.status === 204) return undefined as T;
   const payload = await response.json().catch(() => ({})) as { error?: string };
   if (!response.ok) {

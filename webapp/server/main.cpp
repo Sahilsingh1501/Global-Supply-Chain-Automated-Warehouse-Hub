@@ -729,7 +729,7 @@ class Application {
             inventory.addProduct(Product(103, "Insulated Travel Mug", 24.00, 88));
             inventory.addProduct(Product(104, "Premium Notebook Set", 18.75, 64));
             inventory.addProduct(Product(105, "Laptop Sleeve 14-inch", 32.00, 42));
-            warehouses.addWarehouse(1, "Northstar Distribution", "Chicago", 12000);
+            warehouses.addWarehouse(1, "StockSathi Distribution", "Chicago", 12000);
             warehouses.addWarehouse(2, "East Coast Fulfillment", "New York", 8500);
             warehouses.addWarehouse(3, "Pacific Logistics Center", "Los Angeles", 10000);
             warehouses.searchWarehouse(1)->receiveProduct(101, "Wireless Headphones", 58);

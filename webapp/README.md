@@ -1,4 +1,4 @@
-# Northstar Supply Chain Hub
+# StockSathi — Supply Chain Hub
 
 An internal warehouse and supply-chain operations website with a **native C++ backend** and a React frontend. The API uses the project's existing inventory, warehouse, route, shipment, and snapshot-persistence modules in `VER2`; Node.js is used only for frontend development and build tooling.
 

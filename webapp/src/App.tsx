@@ -193,7 +193,7 @@ export default function App() {
     }
   }
 
-  if (checking) return <div className="boot-screen"><span className="brand-mark"><Command size={22} /></span><span className="boot-title">Northstar</span><span className="boot-loader" /></div>;
+  if (checking) return <div className="boot-screen"><span className="brand-mark"><Command size={22} /></span><span className="boot-title">StockSathi</span><span className="boot-loader" /></div>;
   if (!user) return <Login onSignIn={handleSignIn} />;
 
   const active = sections.find((item) => item.id === section) || sections[0];
@@ -212,8 +212,8 @@ export default function App() {
     <div className="app-shell">
       {sidebarOpen && <button className="mobile-shade" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-        <div className="brand"><span className="brand-mark"><Command size={21} strokeWidth={2.4} /></span><span className="brand-copy"><strong>northstar</strong><small>SUPPLY CHAIN HUB</small></span><button className="mobile-close icon-button" onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X size={19} /></button></div>
-        <div className="workspace-switch"><span className="workspace-avatar">N</span><span className="workspace-copy"><strong>Northstar Commerce</strong><small>Operations workspace</small></span><ChevronDown size={15} /></div>
+        <div className="brand"><span className="brand-mark"><Command size={21} strokeWidth={2.4} /></span><span className="brand-copy"><strong>StockSathi</strong><small>SUPPLY CHAIN HUB</small></span><button className="mobile-close icon-button" onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X size={19} /></button></div>
+        <div className="workspace-switch"><span className="workspace-avatar">S</span><span className="workspace-copy"><strong>StockSathi Operations</strong><small>Operations workspace</small></span><ChevronDown size={15} /></div>
         <nav className="side-nav">
           {["Workspace", "Operations", "Insights", "Administration"].map((group) => {
             const items = visibleSections.filter((item) => item.group === group);
@@ -312,7 +312,7 @@ export default function App() {
             }
           }} />}
         </div>
-        <footer className="app-footer"><span><i className="online-dot" />All systems operational</span><span>Northstar Hub <span className="footer-divider">·</span> v1.0.0</span></footer>
+        <footer className="app-footer"><span><i className="online-dot" />All systems operational</span><span>StockSathi <span className="footer-divider">·</span> v1.0.0</span></footer>
       </main>
 
       {modal && <Modal modal={modal} onClose={() => setModal(null)} onSubmit={submitModal} />}
@@ -334,7 +334,7 @@ function Login({ onSignIn }: { onSignIn: (email: string, password: string) => Pr
     try { await onSignIn(email, password); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not sign in."); }
     finally { setBusy(false); }
   }
-  return <div className="login-shell"><div className="login-art"><div className="login-art-content"><div className="brand login-brand"><span className="brand-mark"><Command size={21} /></span><span className="brand-copy"><strong>northstar</strong><small>SUPPLY CHAIN HUB</small></span></div><div className="art-message"><span className="eyebrow"><i className="online-dot" /> YOUR OPERATIONS, IN FOCUS</span><h1>Move goods.<br /><em>Move forward.</em></h1><p>A calmer, clearer way to run your supply chain. Everything your team needs, in one connected workspace.</p><div className="art-stats"><div><strong>One view</strong><span>for every warehouse</span></div><div><strong>Real-time</strong><span>inventory visibility</span></div></div></div><div className="art-bottom"><span>Built for the people who keep things moving.</span><span>01 / 03</span></div></div><div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><div className="art-glow" /></div><div className="login-panel"><div className="login-mobile-brand"><span className="brand-mark"><Command size={20} /></span><strong>northstar</strong></div><div className="login-form-wrap"><div className="login-icon"><ShieldCheck size={21} /></div><span className="eyebrow">WELCOME BACK</span><h2>Sign in to your workspace</h2><p className="login-subtitle">Enter your details to access your operations dashboard.</p><form onSubmit={(event) => void submit(event)} className="login-form"><label>Email address<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>{error && <div className="form-error">{error}</div>}<button className="primary-button login-submit" disabled={busy}>{busy ? <><span className="button-spinner" /> Signing in...</> : <>Sign in <ArrowRight size={17} /></>}</button></form><p className="login-hint">Demo password: <code>ChangeMe123!</code></p></div><div className="login-legal"><span>© 2026 Northstar Commerce</span><span><ShieldCheck size={14} /> Secure, role-based access</span></div></div></div>;
+  return <div className="login-shell"><div className="login-art"><div className="login-art-content"><div className="brand login-brand"><span className="brand-mark"><Command size={21} /></span><span className="brand-copy"><strong>StockSathi</strong><small>SUPPLY CHAIN HUB</small></span></div><div className="art-message"><span className="eyebrow"><i className="online-dot" /> YOUR OPERATIONS, IN FOCUS</span><h1>Move goods.<br /><em>Move forward.</em></h1><p>A calmer, clearer way to run your supply chain. Everything your team needs, in one connected workspace.</p><div className="art-stats"><div><strong>One view</strong><span>for every warehouse</span></div><div><strong>Real-time</strong><span>inventory visibility</span></div></div></div><div className="art-bottom"><span>Built for the people who keep things moving.</span><span>01 / 03</span></div></div><div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><div className="art-glow" /></div><div className="login-panel"><div className="login-mobile-brand"><span className="brand-mark"><Command size={20} /></span><strong>StockSathi</strong></div><div className="login-form-wrap"><div className="login-icon"><ShieldCheck size={21} /></div><span className="eyebrow">WELCOME BACK</span><h2>Sign in to your workspace</h2><p className="login-subtitle">Enter your details to access your operations dashboard.</p><form onSubmit={(event) => void submit(event)} className="login-form"><label>Email address<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>{error && <div className="form-error">{error}</div>}<button className="primary-button login-submit" disabled={busy}>{busy ? <><span className="button-spinner" /> Signing in...</> : <>Sign in <ArrowRight size={17} /></>}</button></form><p className="login-hint">Demo password: <code>ChangeMe123!</code></p></div><div className="login-legal"><span>© 2026 StockSathi</span><span><ShieldCheck size={14} /> Secure, role-based access</span></div></div></div>;
 }
 
 function DashboardView({ data, loading, onNavigate }: { data: Dashboard | null; loading: boolean; onNavigate: (section: Section) => void }) {
@@ -383,7 +383,7 @@ function downloadStockCsv(rows: Row[]) {
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = `northstar-stock-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `stocksathi-stock-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -397,7 +397,9 @@ function ModuleView({ section, rows, loading, search, canWrite, canCreate, userR
   onCreate: () => void; onAction: (row: Row, action: string) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState("");
   useEffect(() => setQuery(""), [section]);
+  useEffect(() => setSelectedWarehouseId(""), [section]);
   const config: Record<Exclude<Section, "overview">, { title: string; subtitle: string; icon: typeof Package; create?: string; columns: { label: string; value: (row: Row) => React.ReactNode }[] }> = {
     inventory: { title: "Inventory", subtitle: "Product catalog, availability, and stock across your network.", icon: Package, create: "Add product", columns: [
       { label: "PRODUCT", value: (r) => <div className="product-cell"><span className="product-avatar">{text(r.name, "?").slice(0, 1)}</span><span><strong>{text(r.name)}</strong><small>{text(r.sku)} · {text(r.category)}</small></span></div> },
@@ -406,18 +408,10 @@ function ModuleView({ section, rows, loading, search, canWrite, canCreate, userR
       { label: "STATUS", value: (r) => <StatusBadge status={number(r.totalQuantity) <= number(r.reorderLevel) ? "LOW STOCK" : "HEALTHY"} /> },
       { label: "LOCATIONS", value: (r) => <span className="location-list">{toRows(r.stock).filter((s) => number(s.quantity) > 0).map((s) => text((s.warehouse as Row | undefined)?.code)).join(", ") || "Not stocked"}</span> },
     ] },
-    warehouses: { title: "Warehouses", subtitle: "See each fulfillment location, its on-hand products, and available storage capacity.", icon: Building2, create: "Add warehouse", columns: [
-      { label: "LOCATION", value: (r) => <div className="product-cell"><span className="warehouse-avatar"><Building2 size={16} /></span><span><strong>{text(r.name)}</strong><small>{text(r.code)} · {text(r.address)}</small></span></div> },
+    warehouses: { title: "Warehouses", subtitle: "Select a warehouse to see its complete on-hand inventory.", icon: Building2, create: "Add warehouse", columns: [
+      { label: "LOCATION", value: (r) => <button type="button" className="warehouse-location-button" aria-expanded={selectedWarehouseId === text(r.id)} onClick={() => setSelectedWarehouseId(text(r.id))}><span className="product-cell"><span className="warehouse-avatar"><Building2 size={16} /></span><span><strong>{text(r.name)}</strong><small>{text(r.code)} · {text(r.address)}</small></span></span></button> },
       { label: "CITY", value: (r) => text(r.city) },
-      { label: "ON-HAND ITEMS", value: (r) => {
-        const stock = toRows(r.stock).filter((item) => number(item.quantity) > 0);
-        return stock.length
-          ? <span className="warehouse-stock">{stock.map((item) => {
-            const product = item.product as Row | undefined;
-            return <span key={text(item.productId)}><strong>{text(product?.name)}</strong> · {number(item.quantity).toLocaleString()} {text(product?.unit, "pcs")}</span>;
-          })}</span>
-          : <span className="warehouse-stock-empty">No stock recorded</span>;
-      } },
+      { label: "ITEMS", value: (r) => <span className="stock-item-count">{toRows(r.stock).filter((item) => number(item.quantity) > 0).length}<small>on hand</small></span> },
       { label: "CAPACITY", value: (r) => <div className="capacity-cell"><span>{number(r.usedCapacity).toLocaleString()} <small>/ {number(r.capacity).toLocaleString()} units</small></span><span className="capacity-track"><i style={{ width: `${Math.min(100, Math.round(number(r.usedCapacity) / Math.max(1, number(r.capacity)) * 100))}%` }} /></span></div> },
       { label: "NETWORK", value: (r) => <span className="network-count"><Route size={14} /> {number((r._count as Row | undefined)?.outboundRoutes)} outbound lanes</span> },
     ] },
@@ -472,6 +466,8 @@ function ModuleView({ section, rows, loading, search, canWrite, canCreate, userR
   const current = config[section as Exclude<Section, "overview">];
   const filterText = [query, search].filter(Boolean).join(" ").toLowerCase();
   const filtered = rows.filter((row) => JSON.stringify(row).toLowerCase().includes(filterText));
+  const selectedWarehouse = section === "warehouses" ? rows.find((row) => text(row.id) === selectedWarehouseId) : undefined;
+  const selectedStockItems = toRows(selectedWarehouse?.stock).filter((item) => number(item.quantity) > 0);
   const Icon = current.icon;
   const title = section === "inventory" && search ? `${current.title}` : current.title;
   return <div className="page-wrap">
@@ -484,6 +480,13 @@ function ModuleView({ section, rows, loading, search, canWrite, canCreate, userR
       })}{!loading && !filtered.length && <tr><td colSpan={current.columns.length + 1}><EmptyState icon={Icon} title={filterText ? "No matching records" : `No ${current.title.toLowerCase()} yet`} text={filterText ? "Try a different search term." : current.create ? "Add your first record to get started." : "Your data will appear here as you use the system."} /></td></tr>}</tbody></table>{loading && <div className="table-loading"><Skeleton className="table-skeleton" /><Skeleton className="table-skeleton" /><Skeleton className="table-skeleton" /></div>}</div>
       <div className="table-footer"><span>Showing <strong>{loading ? "—" : filtered.length}</strong> of <strong>{rows.length}</strong> records</span><span className="table-page">Page 1 <ChevronDown size={13} /></span></div>
     </section>
+    {selectedWarehouse && <section className="panel warehouse-detail" id="warehouse-stock-detail">
+      <div className="panel-heading warehouse-detail-heading"><div><h2>{text(selectedWarehouse.name)} on-hand items</h2><p>{text(selectedWarehouse.code)} · {selectedStockItems.length} {selectedStockItems.length === 1 ? "item" : "items"} in stock</p></div><button className="secondary-button" onClick={() => setSelectedWarehouseId("")}>Close</button></div>
+      {selectedStockItems.length ? <div className="responsive-table"><table className="data-table stock-detail-table"><thead><tr><th>PRODUCT</th><th>SKU</th><th>ON HAND</th></tr></thead><tbody>{selectedStockItems.map((item) => {
+        const product = item.product as Row | undefined;
+        return <tr key={text(item.productId)}><td><strong>{text(product?.name)}</strong></td><td>{text(product?.sku)}</td><td><strong>{number(item.quantity).toLocaleString()} <span className="unit-label">{text(product?.unit, "pcs")}</span></strong></td></tr>;
+      })}</tbody></table></div> : <EmptyState icon={Package} title="No items on hand" text="This warehouse has no recorded stock." />}
+    </section>}
     {section === "orders" && <div className="report-note"><ArrowDownLeft size={16} /><span>Receiving an order adds the delivered quantity to the warehouse selected on that order. Partial deliveries are supported.</span></div>}
     {section === "routes" && <div className="report-note"><Route size={16} /><span>“Not set” means this route has no recorded distance. Use <strong>Manage</strong> to enter the actual lane distance and transit time.</span></div>}
     {section === "shipments" && <div className="shipment-help"><div className="shipment-help-icon"><Truck size={18} /></div><span><strong>How shipment tracking works</strong><small>Advance a shipment to its next stop. When it reaches its destination, inventory is received automatically.</small></span><ArrowRight size={16} /></div>}

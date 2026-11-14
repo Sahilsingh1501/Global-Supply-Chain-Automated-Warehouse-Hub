@@ -208,9 +208,16 @@ kbd { padding: 2px 4px; color: #9aa3a8; background: #fff; border: 1px solid #e9e
 .capacity-track { width: 100%; height: 4px; overflow: hidden; background: #edf1f1; border-radius: 8px; }
 .capacity-track i { height: 100%; display: block; background: #68a88b; border-radius: inherit; }
 .network-count { display: flex; align-items: center; gap: 5px; color: #83918d; font-size: 9px; }
-.warehouse-stock { display: flex; flex-direction: column; gap: 4px; color: #75877e; font-size: 9px; white-space: normal; }
-.warehouse-stock strong { color: #526168; }
-.warehouse-stock-empty { color: #9da7aa; font-size: 9px; }
+.warehouse-location-button { display: block; padding: 0; color: inherit; background: transparent; border: 0; text-align: left; }
+.warehouse-location-button:hover .product-cell strong { color: #1e806b; }
+.warehouse-location-button .product-cell small::after { content: " · View items"; color: #4a8b75; }
+.stock-item-count { display: inline-flex; align-items: center; gap: 6px; color: #526168; font-weight: 700; }
+.stock-item-count small { color: #97a2a4; font-size: 9px; font-weight: 400; }
+.warehouse-detail { margin-top: 16px; overflow: hidden; }
+.warehouse-detail-heading { align-items: center; padding: 15px 17px; }
+.warehouse-detail-heading p { margin: 3px 0 0; color: #99a4a6; font-size: 9px; }
+.stock-detail-table { min-width: 500px !important; }
+.stock-detail-table th:last-child, .stock-detail-table td:last-child { text-align: right; }
 .supplier-avatar { color: #937c54; background: #f6f1e8; }
 .order-count { width: 22px; height: 22px; display: inline-grid; place-items: center; color: #6f8079; background: #eff4f1; border-radius: 6px; font-size: 9px; font-weight: 700; }
 .route-arrow { color: #83a396; }
