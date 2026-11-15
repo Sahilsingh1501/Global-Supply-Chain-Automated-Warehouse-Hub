@@ -9,5 +9,14 @@ if (-not (Test-Path $apiBinary -PathType Leaf)) {
 
 $env:GSC_WEB_ROOT = ""
 Set-Location (Join-Path $projectRoot "VER2")
-& $apiBinary
+try {
+    & $apiBinary
+} catch {
+    if ($_.Exception.Message -match "Application Control policy has blocked this file") {
+        [Console]::Error.WriteLine("ERROR: Windows application control blocked the locally built API executable.")
+        [Console]::Error.WriteLine("Use an organization-approved signed build or ask your administrator to allow '$apiBinary'. Do not disable application control.")
+        exit 1
+    }
+    throw
+}
 exit $LASTEXITCODE

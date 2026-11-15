@@ -81,7 +81,7 @@ if errorlevel 1 (
     echo.
     echo The C++ API did not become ready at http://127.0.0.1:4000/api/health.
     echo Check the second window for API startup errors.
-    echo If Windows Security blocked gsc-server.exe, review Protection history.
+    echo If an Application Control policy blocked gsc-server.exe, use an approved signed build or ask your administrator to allow it.
     pause
     exit /b 1
 )

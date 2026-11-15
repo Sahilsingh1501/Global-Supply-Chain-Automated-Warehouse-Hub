@@ -42,6 +42,8 @@ npm run dev
 
 `npm run dev` builds and starts the native C++ API, then starts Vite. Open <http://localhost:5173>. If you use MinGW-w64 and it is not on `PATH`, set `CXX` to the compiler executable before running the commands.
 
+If Windows reports that an **Application Control policy has blocked** `gsc-server.exe`, the API build completed but Windows refused to run it. Use an organization-approved signed build or ask your administrator to allow the locally built API executable; do not disable application control. The development services stop when the API cannot start.
+
 The initial local admin is `admin@example.com` / `ChangeMe123!`. Set `GSC_ADMIN_PASSWORD` (at least 10 characters) before the first launch to use a different password, and optionally set `GSC_ADMIN_EMAIL`. The demo credential is for local development only.
 
 ## Build and run production
@@ -90,8 +92,8 @@ Operational endpoints require `Authorization: Bearer <token>` after `POST /api/a
 |---|---|
 | Session | `POST /api/auth/login`, `GET /api/auth/me` |
 | Dashboard | `GET /api/dashboard` |
-| Inventory | `GET/POST /api/products`, `PATCH /api/products/:id`, `POST /api/inventory/adjustments`, `GET /api/inventory/movements` |
-| Warehouses | `GET/POST /api/warehouses`, `PATCH /api/warehouses/:id` |
+| Inventory | `GET/POST /api/products`, `PATCH/DELETE /api/products/:id`, `POST /api/inventory/adjustments`, `GET /api/inventory/movements` |
+| Warehouses | `GET/POST /api/warehouses`, `PATCH/DELETE /api/warehouses/:id` |
 | Suppliers | `GET/POST /api/suppliers`, `PATCH /api/suppliers/:id` |
 | Purchasing | `GET/POST /api/purchase-orders`, `POST /api/purchase-orders/:id/receive`, `POST /api/purchase-orders/:id/cancel` |
 | Routes | `GET/POST /api/routes`, `PATCH /api/routes/:id` |

@@ -225,6 +225,8 @@ kbd { padding: 2px 4px; color: #9aa3a8; background: #fff; border: 1px solid #e9e
 .table-avatar { width: 29px; height: 29px; font-size: 9px; }
 .small-action { min-height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 7px; color: #43816e; background: #f1f7f4; border: 1px solid #e4eee8; border-radius: 5px; font-size: 9px; font-weight: 700; white-space: nowrap; }
 .small-action:hover { color: #1a6d59; background: #e8f3ed; }
+.danger-action { color: #a75347; background: #fff2f0; border-color: #f2d7d1; }
+.danger-action:hover { color: #8d352d; background: #ffeae5; }
 .receive-action { color: #967e4d; background: #faf6ed; border-color: #f0ebdf; }
 .receive-action:hover { color: #806732; background: #f7f0e1; }
 .action-pair { display: flex; align-items: center; gap: 5px; }

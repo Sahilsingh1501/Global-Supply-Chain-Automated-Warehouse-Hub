@@ -404,6 +404,13 @@ class Application {
     }
 
     template <typename Handler>
+    void addDelete(const std::string& path, Handler handler) {
+        server.Delete(path.c_str(), [this, handler](const httplib::Request& request, httplib::Response& response) {
+            execute(request, response, handler);
+        });
+    }
+
+    template <typename Handler>
     void execute(const httplib::Request& request, httplib::Response& response, Handler handler) {
         std::lock_guard<std::mutex> lock(stateMutex);
         OutputCapture outputCapture;
@@ -1325,6 +1332,24 @@ class Application {
             sendJson(response, 200, productJson(*product));
         });
 
+        addDelete("/api/products/([0-9]+)", [this](const httplib::Request& request, httplib::Response& response) {
+            const UserRecord actor = requireUser(request);
+            requireRole(actor, {"ADMIN", "INVENTORY"});
+            const int id = parseId(request.matches[1], "Product ID");
+            Product* product = inventory.searchProduct(id);
+            ProductMeta* meta = findProductMeta(id);
+            if (!product || !meta) throw ApiError(404, "Product not found.");
+            if (warehouses.containsProduct(id) || supplyChain.inTransitProductQuantity(id) > 0)
+                throw ApiError(409, "This product is still stored in a warehouse or in transit and cannot be deleted.");
+            inventory.deleteProduct(id);
+            productMetadata.erase(std::remove_if(productMetadata.begin(), productMetadata.end(),
+                [id](const ProductMeta& item) { return item.id == id; }), productMetadata.end());
+            recordAudit(actor, "deleted", "product", std::to_string(id), meta->sku);
+            saveAll();
+            response.status = 204;
+            response.set_content("", "");
+        });
+
         addGet("/api/warehouses", [this](const httplib::Request& request, httplib::Response& response) {
             requireUser(request);
             json rows = json::array();
@@ -1377,6 +1402,24 @@ class Application {
             recordAudit(actor, "updated", "warehouse", std::to_string(id), meta->code);
             saveAll();
             sendJson(response, 200, warehouseJson(*warehouse));
+        });
+
+        addDelete("/api/warehouses/([0-9]+)", [this](const httplib::Request& request, httplib::Response& response) {
+            const UserRecord actor = requireUser(request);
+            requireRole(actor, {"ADMIN", "INVENTORY"});
+            const int id = parseId(request.matches[1], "Warehouse ID");
+            Warehouse* warehouse = warehouses.searchWarehouse(id);
+            WarehouseMeta* meta = findWarehouseMeta(id);
+            if (!warehouse || !meta) throw ApiError(404, "Warehouse not found.");
+            if (supplyChain.usesWarehouse(id) || !warehouse->isEmpty())
+                throw ApiError(409, "This warehouse is still used by routes, shipments, or stock and cannot be deleted.");
+            warehouses.deleteWarehouse(id);
+            warehouseMetadata.erase(std::remove_if(warehouseMetadata.begin(), warehouseMetadata.end(),
+                [id](const WarehouseMeta& item) { return item.id == id; }), warehouseMetadata.end());
+            recordAudit(actor, "deleted", "warehouse", std::to_string(id), meta->code);
+            saveAll();
+            response.status = 204;
+            response.set_content("", "");
         });
 
         addPost("/api/inventory/adjustments", [this](const httplib::Request& request, httplib::Response& response) {
