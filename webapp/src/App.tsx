@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowDownLeft, ArrowDownRight, ArrowLeftRight, ArrowRight, Bell, Boxes,
-  Building2, Check, ChevronDown, CircleHelp, Clock3, Command, FileBarChart2, LayoutDashboard,
-  Download, LogOut, MapPin, Menu, Package, Plus, Route, Search, Settings2, ShieldCheck, Truck, Users, X,
+  Building2, Check, ChevronDown, Clock3, FileBarChart2, LayoutDashboard,
+  Download, LockKeyhole, LogOut, Mail, MapPin, Menu, Package, Plus, Route, Search, Settings2, ShieldCheck, Truck, Users, X,
 } from "lucide-react";
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -18,7 +18,18 @@ type Dashboard = {
   recentShipments: Row[];
   recentMovements: Row[];
 };
-type Field = { name: string; label: string; type?: string; required?: boolean; options?: { value: string; label: string }[]; wide?: boolean; min?: number };
+type Field = {
+  name: string;
+  label: string;
+  type?: string;
+  required?: boolean;
+  options?: { value: string; label: string }[];
+  optionsFor?: (values: Record<string, string>) => { value: string; label: string }[];
+  emptyLabel?: (values: Record<string, string>) => string;
+  clearOnChange?: string[];
+  wide?: boolean;
+  min?: number;
+};
 type ModalState = { title: string; description: string; fields: Field[]; values?: Record<string, string>; submit: (data: Record<string, string>) => Promise<void> };
 type Notice = { type: "success" | "error"; message: string };
 
@@ -140,6 +151,7 @@ export default function App() {
     const products = toRows(await request<unknown>("/products"));
     const warehouses = toRows(await request<unknown>("/warehouses"));
     const suppliers = toRows(await request<unknown>("/suppliers"));
+    const routes = target === "shipments" ? toRows(await request<unknown>("/routes")) : [];
     const productOptions = products.map((product) => ({ value: text(product.id), label: `${text(product.name)} · ${text(product.sku)}` }));
     const warehouseOptions = warehouses.map((warehouse) => ({ value: text(warehouse.id), label: `${text(warehouse.name)} · ${text(warehouse.city)}` }));
       if (target === "inventory") {
@@ -177,9 +189,41 @@ export default function App() {
       ], (data) => request("/routes", { method: "POST", body: JSON.stringify({ ...data, distanceKm: Number(data.distanceKm), transitHours: Number(data.transitHours) }) }));
     } else if (target === "shipments") {
       formModal("Create a shipment", "Dispatch available stock along an active route.", [
-        { name: "originId", label: "Origin warehouse", type: "select", required: true, options: warehouseOptions },
-        { name: "destinationId", label: "Destination warehouse", type: "select", required: true, options: warehouseOptions },
-        { name: "productId", label: "Product", type: "select", required: true, options: productOptions },
+        { name: "originId", label: "Origin warehouse", type: "select", required: true, options: warehouseOptions, clearOnChange: ["destinationId", "productId", "quantity"] },
+        {
+          name: "destinationId", label: "Destination warehouse", type: "select", required: true,
+          optionsFor: (values) => {
+            const originId = values.originId;
+            if (!originId) return [];
+            const connectedIds = new Set(routes.filter((route) =>
+              route.active === true &&
+              (text(route.fromWarehouseId) === originId || text(route.toWarehouseId) === originId),
+            ).map((route) => text(route.fromWarehouseId) === originId
+              ? text(route.toWarehouseId)
+              : text(route.fromWarehouseId)));
+            return warehouses.filter((warehouse) => connectedIds.has(text(warehouse.id)))
+              .map((warehouse) => ({ value: text(warehouse.id), label: `${text(warehouse.name)} · ${text(warehouse.city)}` }));
+          },
+          emptyLabel: (values) => values.originId ? "No active routes from this warehouse" : "Select an origin first",
+        },
+        {
+          name: "productId", label: "Product", type: "select", required: true,
+          optionsFor: (values) => {
+            const warehouse = warehouses.find((item) => text(item.id) === values.originId);
+            return toRows(warehouse?.stock)
+              .filter((stock) => number(stock.quantity) > 0)
+              .map((stock) => {
+                const productId = text(stock.productId);
+                const product = products.find((item) => text(item.id) === productId);
+                return {
+                  value: productId,
+                  label: `${text(product?.name, text((stock.product as Row | undefined)?.name))} · ${text(product?.sku, text((stock.product as Row | undefined)?.sku))} · ${number(stock.quantity)} available`,
+                };
+              });
+          },
+          emptyLabel: (values) => values.originId ? "No products in this warehouse" : "Select an origin first",
+          clearOnChange: ["quantity"],
+        },
         { name: "quantity", label: "Quantity", type: "number", required: true },
         { name: "expectedAt", label: "Estimated delivery", type: "date" },
       ], (data) => request("/shipments", { method: "POST", body: JSON.stringify({ originId: data.originId, destinationId: data.destinationId, expectedAt: data.expectedAt ? new Date(`${data.expectedAt}T12:00:00`).toISOString() : null, items: [{ productId: data.productId, quantity: Number(data.quantity) }] }) }));
@@ -193,7 +237,7 @@ export default function App() {
     }
   }
 
-  if (checking) return <div className="boot-screen"><span className="brand-mark"><Command size={22} /></span><span className="boot-title">StockSathi</span><span className="boot-loader" /></div>;
+  if (checking) return <div className="boot-screen"><img className="boot-logo" src="/stocksathi-logo.png" alt="StockSathi" /><span className="boot-loader" /></div>;
   if (!user) return <Login onSignIn={handleSignIn} />;
 
   const active = sections.find((item) => item.id === section) || sections[0];
@@ -212,7 +256,7 @@ export default function App() {
     <div className="app-shell">
       {sidebarOpen && <button className="mobile-shade" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-        <div className="brand"><span className="brand-mark"><Command size={21} strokeWidth={2.4} /></span><span className="brand-copy"><strong>StockSathi</strong><small>SUPPLY CHAIN HUB</small></span><button className="mobile-close icon-button" onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X size={19} /></button></div>
+        <div className="brand"><img className="brand-logo" src="/stocksathi-logo.png" alt="StockSathi" /><button className="mobile-close icon-button" onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X size={19} /></button></div>
         <div className="workspace-switch"><span className="workspace-avatar">S</span><span className="workspace-copy"><strong>StockSathi Operations</strong><small>Operations workspace</small></span><ChevronDown size={15} /></div>
         <nav className="side-nav">
           {["Workspace", "Operations", "Insights", "Administration"].map((group) => {
@@ -224,7 +268,7 @@ export default function App() {
           })}
         </nav>
         <div className="sidebar-bottom">
-          <div className="support-card"><div className="support-icon"><CircleHelp size={17} /></div><strong>Need a hand?</strong><p>Get a quick overview of your operations.</p><button onClick={() => setNotice({ type: "success", message: "Start with Inventory, then add your warehouse routes." })}>View quick guide <ArrowRight size={14} /></button></div>
+          <div className="support-card"><div className="support-icon"><Package size={17} /></div><strong>Your stock, at a glance</strong><p>See products and on-hand quantities across your warehouses.</p><button onClick={() => { setSection("inventory"); setSearch(""); }}>Explore inventory <ArrowRight size={14} /></button></div>
           <div className="profile-card"><div className="avatar">{initials(user.name)}</div><span className="profile-copy"><strong>{user.name}</strong><small>{user.role.toLowerCase().replace("_", " ")}</small></span><button className="icon-button profile-menu" onClick={handleSignOut} title="Sign out" aria-label="Sign out"><LogOut size={17} /></button></div>
         </div>
       </aside>
@@ -334,7 +378,78 @@ function Login({ onSignIn }: { onSignIn: (email: string, password: string) => Pr
     try { await onSignIn(email, password); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not sign in."); }
     finally { setBusy(false); }
   }
-  return <div className="login-shell"><div className="login-art"><div className="login-art-content"><div className="brand login-brand"><span className="brand-mark"><Command size={21} /></span><span className="brand-copy"><strong>StockSathi</strong><small>SUPPLY CHAIN HUB</small></span></div><div className="art-message"><span className="eyebrow"><i className="online-dot" /> YOUR OPERATIONS, IN FOCUS</span><h1>Move goods.<br /><em>Move forward.</em></h1><p>A calmer, clearer way to run your supply chain. Everything your team needs, in one connected workspace.</p><div className="art-stats"><div><strong>One view</strong><span>for every warehouse</span></div><div><strong>Real-time</strong><span>inventory visibility</span></div></div></div><div className="art-bottom"><span>Built for the people who keep things moving.</span><span>01 / 03</span></div></div><div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><div className="art-glow" /></div><div className="login-panel"><div className="login-mobile-brand"><span className="brand-mark"><Command size={20} /></span><strong>StockSathi</strong></div><div className="login-form-wrap"><div className="login-icon"><ShieldCheck size={21} /></div><span className="eyebrow">WELCOME BACK</span><h2>Sign in to your workspace</h2><p className="login-subtitle">Enter your details to access your operations dashboard.</p><form onSubmit={(event) => void submit(event)} className="login-form"><label>Email address<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>{error && <div className="form-error">{error}</div>}<button className="primary-button login-submit" disabled={busy}>{busy ? <><span className="button-spinner" /> Signing in...</> : <>Sign in <ArrowRight size={17} /></>}</button></form><p className="login-hint">Demo password: <code>ChangeMe123!</code></p></div><div className="login-legal"><span>© 2026 StockSathi</span><span><ShieldCheck size={14} /> Secure, role-based access</span></div></div></div>;
+  return <div className="login-shell">
+    <div className="login-art">
+      <div className="login-art-content">
+        <div className="brand login-brand"><img className="brand-logo" src="/stocksathi-logo.png" alt="StockSathi" /></div>
+        <div className="art-message">
+          <span className="eyebrow"><i className="online-dot" /> YOUR OPERATIONS, IN FOCUS</span>
+          <h1>Move goods.<br /><em>Move forward.</em></h1>
+          <p>A smarter, simpler way to keep your supply chain moving. Track inventory, connect warehouses, and deliver with confidence.</p>
+          <div className="art-stats">
+            <div><Boxes size={22} /><strong>One view</strong><span>for every warehouse</span></div>
+            <div><Route size={22} /><strong>Real-time</strong><span>shipment updates</span></div>
+          </div>
+        </div>
+        <div className="art-bottom"><span>Built for the people who keep things moving.</span><span>SUPPLY CHAIN HUB</span></div>
+      </div>
+      <svg className="login-hero-graphic" viewBox="0 0 760 540" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="hero-line" x1="106" y1="458" x2="708" y2="67" gradientUnits="userSpaceOnUse"><stop stopColor="#0ACB8B" stopOpacity=".15" /><stop offset=".55" stopColor="#32F1B1" /><stop offset="1" stopColor="#A2FFE2" /></linearGradient>
+          <linearGradient id="hero-ocean" x1="398" y1="185" x2="587" y2="438" gradientUnits="userSpaceOnUse"><stop stopColor="#075E53" /><stop offset=".55" stopColor="#063D3D" /><stop offset="1" stopColor="#061F2C" /></linearGradient>
+          <linearGradient id="hero-land" x1="382" y1="219" x2="579" y2="388" gradientUnits="userSpaceOnUse"><stop stopColor="#91FFD0" /><stop offset="1" stopColor="#1B9B78" /></linearGradient>
+          <linearGradient id="hero-mountain" x1="472" y1="364" x2="554" y2="529" gradientUnits="userSpaceOnUse"><stop stopColor="#355C50" /><stop offset=".45" stopColor="#15372F" /><stop offset="1" stopColor="#071D19" /></linearGradient>
+          <radialGradient id="hero-globe-glow"><stop stopColor="#41F2BE" stopOpacity=".38" /><stop offset="1" stopColor="#0ACB8B" stopOpacity="0" /></radialGradient>
+          <clipPath id="hero-earth-clip"><circle cx="488" cy="303" r="127" /></clipPath>
+          <filter id="hero-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+        </defs>
+        <circle cx="488" cy="303" r="172" fill="url(#hero-globe-glow)" />
+        <g fill="#25D99A" fillOpacity=".3">
+          <rect x="302" y="294" width="17" height="171" rx="3" /><rect x="329" y="267" width="17" height="198" rx="3" /><rect x="356" y="237" width="17" height="228" rx="3" />
+          <rect x="383" y="257" width="17" height="208" rx="3" /><rect x="410" y="208" width="17" height="257" rx="3" /><rect x="437" y="192" width="17" height="273" rx="3" />
+          <rect x="464" y="167" width="17" height="298" rx="3" /><rect x="491" y="183" width="17" height="282" rx="3" /><rect x="518" y="147" width="17" height="318" rx="3" />
+          <rect x="545" y="131" width="17" height="334" rx="3" /><rect x="572" y="143" width="17" height="322" rx="3" /><rect x="599" y="101" width="17" height="364" rx="3" />
+          <rect x="626" y="82" width="17" height="383" rx="3" /><rect x="653" y="96" width="17" height="369" rx="3" />
+        </g>
+        <circle cx="488" cy="303" r="127" fill="url(#hero-ocean)" stroke="#77FFD0" strokeOpacity=".78" strokeWidth="2" />
+        <g clipPath="url(#hero-earth-clip)">
+          <path d="m391 236 23-19 25 4 8 15 19 7-5 18-21 7-8 22-18 10-10 29-16 7-7-21-19-17 2-23 15-12 2-18 17-9 12-17Z" fill="url(#hero-land)" />
+          <path d="m451 325 20-12 21 9 10 18-8 22-14 16-5 31-15 18-9-24-15-17-1-26-12-17 10-19 18-9Z" fill="url(#hero-land)" />
+          <path d="m511 238 20-15 25 7 11 16 22 6 13 22-11 17-20-2-10 20-19-7-11-18-17-5-7-20-16-3-7-16 17-2Z" fill="url(#hero-land)" />
+          <path d="m546 300 18-8 15 12 7 22-13 18-4 28-17 13-12-16 2-24-14-17 7-19Z" fill="url(#hero-land)" />
+          <path d="M361 303h254M488 176v254M404 199c48 35 120 35 168 0M380 250c63 31 153 31 216 0M380 355c63-31 153-31 216 0M404 406c48-35 120-35 168 0" stroke="#9BFFE0" strokeOpacity=".25" />
+          <ellipse cx="488" cy="303" rx="60" ry="127" stroke="#9BFFE0" strokeOpacity=".32" />
+          <ellipse cx="488" cy="303" rx="104" ry="127" stroke="#9BFFE0" strokeOpacity=".19" />
+        </g>
+        <circle cx="488" cy="303" r="135" stroke="#A3FFE0" strokeOpacity=".3" />
+        <path d="m108 434 95-63 63 18 76-82 60 15 95-89 55 10 107-130" stroke="url(#hero-line)" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" filter="url(#hero-glow)" />
+        <path d="m680 106 29-33 10 45" stroke="#A2FFE2" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" filter="url(#hero-glow)" />
+        <g fill="#A2FFE2" filter="url(#hero-glow)"><circle cx="203" cy="371" r="4" /><circle cx="408" cy="322" r="4" /><circle cx="552" cy="243" r="4" /></g>
+        <path d="m168 506 103-71 55 20 85-65 55 34 80-78 49 24 72-56 93 47v179H168v-34Z" fill="url(#hero-mountain)" />
+        <path d="m168 506 103-71 55 20 85-65 55 34 80-78 49 24 72-56 93 47" stroke="#75C9A4" strokeOpacity=".55" strokeWidth="2" />
+        <path d="m271 435 26 39 29-19m85-65 29 44 26-10m80-78 29 41 20-17m72-39 25 35 22-14" stroke="#C1F4D9" strokeOpacity=".28" strokeWidth="2" />
+      </svg>
+      <div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><div className="art-glow" />
+    </div>
+    <div className="login-panel">
+      <div className="login-chart-decoration" aria-hidden="true">{Array.from({ length: 11 }, (_, index) => <i key={index} />)}</div>
+      <div className="login-mobile-brand"><img src="/stocksathi-logo.png" alt="StockSathi" /></div>
+      <div className="login-form-wrap">
+        <div className="login-icon"><ShieldCheck size={19} /></div>
+        <span className="eyebrow">WELCOME BACK</span>
+        <h2>Sign in to your workspace</h2>
+        <p className="login-subtitle">Enter your details to access your operations dashboard.</p>
+        <form onSubmit={(event) => void submit(event)} className="login-form">
+          <label>Email address<span className="login-input-wrap"><Mail size={15} /><input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" required /></span></label>
+          <label>Password<span className="login-input-wrap"><LockKeyhole size={15} /><input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></span></label>
+          {error && <div className="form-error">{error}</div>}
+          <button className="primary-button login-submit" disabled={busy}>{busy ? <><span className="button-spinner" /> Signing in...</> : <>Sign in <ArrowRight size={17} /></>}</button>
+        </form>
+        <p className="login-hint">Demo password: <code>ChangeMe123!</code></p>
+      </div>
+      <div className="login-legal"><span>© 2026 StockSathi</span><span><ShieldCheck size={14} /> Secure, role-based access</span></div>
+    </div>
+  </div>;
 }
 
 function DashboardView({ data, loading, onNavigate }: { data: Dashboard | null; loading: boolean; onNavigate: (section: Section) => void }) {
@@ -569,5 +684,12 @@ function Modal({ modal, onClose, onSubmit }: { modal: ModalState; onClose: () =>
     try { await onSubmit(values); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save these changes."); }
     finally { setBusy(false); }
   }
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}><section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-heading"><div><span className="eyebrow">NORTHSTAR WORKSPACE</span><h2 id="modal-title">{modal.title}</h2><p>{modal.description}</p></div><button className="icon-button modal-close" onClick={onClose} aria-label="Close"><X size={19} /></button></div><form onSubmit={(event) => void submit(event)}>  <div className="modal-fields">{modal.fields.map((field) => <label className={field.wide ? "field-wide" : ""} key={field.name}>{field.label}{field.options ? <select required={field.required} value={values[field.name] || ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}><option value="">Select an option</option>{field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : field.type === "textarea" ? <textarea rows={3} required={field.required} value={values[field.name] || ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} /> : <input type={field.type || "text"} min={field.type === "number" ? field.min ?? 1 : undefined} step={field.type === "number" ? 1 : undefined} required={field.required} value={values[field.name] || ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} />}</label>)}</div>{error && <div className="form-error modal-error">{error}</div>}<div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose} disabled={busy}>Cancel</button><button type="submit" className="primary-button" disabled={busy}>{busy ? <><span className="button-spinner" /> Saving...</> : <><Check size={16} /> Save changes</>}</button></div></form></section></div>;
+  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}><section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-heading"><div><span className="eyebrow">NORTHSTAR WORKSPACE</span><h2 id="modal-title">{modal.title}</h2><p>{modal.description}</p></div><button className="icon-button modal-close" onClick={onClose} aria-label="Close"><X size={19} /></button></div><form onSubmit={(event) => void submit(event)}>  <div className="modal-fields">{modal.fields.map((field) => {
+    const options = field.optionsFor ? field.optionsFor(values) : field.options;
+    return <label className={field.wide ? "field-wide" : ""} key={field.name}>{field.label}{options ? <select required={field.required} value={values[field.name] || ""} onChange={(event) => {
+      const nextValues = { ...values, [field.name]: event.target.value };
+      for (const name of field.clearOnChange || []) delete nextValues[name];
+      setValues(nextValues);
+    }}><option value="">{options.length ? "Select an option" : field.emptyLabel?.(values) || "Select an option"}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : field.type === "textarea" ? <textarea rows={3} required={field.required} value={values[field.name] || ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} /> : <input type={field.type || "text"} min={field.type === "number" ? field.min ?? 1 : undefined} step={field.type === "number" ? 1 : undefined} required={field.required} value={values[field.name] || ""} onChange={(event) => setValues({ ...values, [field.name]: event.target.value })} />}</label>;
+  })}</div>{error && <div className="form-error modal-error">{error}</div>}<div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose} disabled={busy}>Cancel</button><button type="submit" className="primary-button" disabled={busy}>{busy ? <><span className="button-spinner" /> Saving...</> : <><Check size={16} /> Save changes</>}</button></div></form></section></div>;
 }
