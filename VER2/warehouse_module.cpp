@@ -320,6 +320,7 @@ public:
     WarehouseManager(const WarehouseManager&) = delete;
     WarehouseManager& operator=(const WarehouseManager&) = delete;
     bool addWarehouse(int id, const string& name, const string& location, int capacity) {
+        if (id <= 0) return false;
         bool added = false;
         root = insert(root, id, name, location, capacity, added);
         return added;
