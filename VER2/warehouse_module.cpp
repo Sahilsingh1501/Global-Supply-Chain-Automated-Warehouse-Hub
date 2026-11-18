@@ -41,13 +41,22 @@ public:
     const string& getLocation() const { return location; }
     int getCapacity() const { return capacity; }
     int getUsedCapacity() const { return usedCapacity; }
-    double getCapacityUtilization() const {
-        if (capacity <= 0)
-            return 0.0;
-
-        return (static_cast<double>(usedCapacity) / capacity) * 100.0;
+    int getAvailableCapacity() const {
+        return capacity - usedCapacity;
     }
-    void setCapacity(int value) { capacity = value; }
+    double getCapacityUtilization() const {
+        return getUtilization();
+    }
+    double getUtilization() const {
+        if (capacity <= 0) return 0.0;
+        return (static_cast<double>(usedCapacity) / capacity) * 100;
+    }
+    bool setCapacity(int value) {
+        if (value <= 0 || value < usedCapacity)
+            return false;
+        capacity = value;
+        return true;
+    }
     void setName(const string& value) { name = value; }
     void setLocation(const string& value) { location = value; }
     bool isEmpty() const { return products == nullptr; }
