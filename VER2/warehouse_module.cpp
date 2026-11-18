@@ -18,7 +18,7 @@ struct StoredProduct {
 };
 class Warehouse {
 private:
-    int id;             
+    int id;
     string name;
     string location;
     int capacity;
