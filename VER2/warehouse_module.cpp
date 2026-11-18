@@ -41,18 +41,17 @@ public:
     const string& getLocation() const { return location; }
     int getCapacity() const { return capacity; }
     int getUsedCapacity() const { return usedCapacity; }
-   bool setCapacity(int value) {
-    if (value <= 0 || value < usedCapacity) {
-        cout << "Invalid capacity! New capacity cannot be less "
-             << "than the currently stored quantity.\n";
-        return false;
+    bool setCapacity(int value) {
+        if (value <= 0 || value < usedCapacity) {
+            cout << "Invalid capacity! New capacity cannot be less "
+                 << "than the currently stored quantity.\n";
+            return false;
+        }
+
+        capacity = value;
+        cout << "Warehouse capacity updated successfully.\n";
+        return true;
     }
-
-    capacity = value;
-
-    cout << "Warehouse capacity updated successfully.\n";
-    return true;
-}
     void setName(const string& value) { name = value; }
     void setLocation(const string& value) { location = value; }
     bool isEmpty() const { return products == nullptr; }
@@ -409,6 +408,7 @@ int main() {
              << "2. Delete warehouse\n"
              << "3. Display all warehouses\n"
              << "4. Store product in warehouse\n"
+             << "5. Update warehouse capacity\n"
              << "0. Exit\n";
         if (!warehouseReadInteger("Choice: ", choice)) {
             if (cin.eof()) break;
@@ -460,6 +460,19 @@ int main() {
                 cout << "Product ID and quantity must be greater than zero.\n";
             } else {
                 warehouse->addProduct(productId, productName, quantity);
+            }
+        } else if (choice == 5) {
+            int warehouseId;
+            int capacity;
+            if (!warehouseReadInteger("Warehouse ID: ", warehouseId) ||
+                !warehouseReadInteger("New capacity (units): ", capacity)) {
+                continue;
+            }
+            Warehouse* warehouse = manager.searchWarehouse(warehouseId);
+            if (!warehouse) {
+                cout << "Warehouse not found.\n";
+            } else {
+                warehouse->setCapacity(capacity);
             }
         } else if (choice == 0) {
             cout << "Warehouse Manager closed. Changes are only in memory.\n";
