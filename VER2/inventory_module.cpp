@@ -292,6 +292,8 @@ int main() {
              << "2. Delete product\n"
              << "3. Update product stock\n"
              << "4. Display all products\n"
+             << "5. Low stock alerts\n"
+             << "6. Inventory summary report\n"
              << "0. Exit\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) break;
@@ -342,6 +344,13 @@ int main() {
             }
         } else if (choice == 4) {
             inventory.displayProducts();
+        } else if (choice == 5) {
+            int threshold;
+            if (readInteger("Enter low stock threshold: ", threshold)) {
+                inventory.displayLowStockProducts(threshold);
+            }
+        } else if (choice == 6) {
+            inventory.displayInventorySummary();
         } else if (choice == 0) {
             cout << "Inventory Manager closed. Changes are only in memory.\n";
         } else {
