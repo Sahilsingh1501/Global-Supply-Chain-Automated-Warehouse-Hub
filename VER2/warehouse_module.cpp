@@ -108,6 +108,20 @@ public:
         }
         return 0;
     }
+    bool getProductName(int productId, string& productName) const {
+        StoredProduct* current = products;
+
+        while (current != nullptr) {
+            if (current->id == productId) {
+                productName = current->name;
+                return true;
+            }
+
+            current = current->next;
+        }
+
+        return false;
+    }
     void searchStoredProduct(int productId) const {
         StoredProduct* current = products;
 
@@ -454,6 +468,67 @@ public:
     int storedProductQuantity(int productId) const {
         return storedProductQuantity(root, productId);
     }
+    bool transferProduct(int sourceId, int destinationId,
+                         int productId, int quantity) {
+        if (sourceId == destinationId) {
+            cout << "Source and destination cannot be the same.\n";
+            return false;
+        }
+
+        if (productId <= 0 || quantity <= 0) {
+            cout << "Invalid product ID or quantity.\n";
+            return false;
+        }
+
+        Warehouse* source = searchWarehouse(sourceId);
+        Warehouse* destination = searchWarehouse(destinationId);
+
+        if (source == nullptr || destination == nullptr) {
+            cout << "Source or destination warehouse not found.\n";
+            return false;
+        }
+
+        string productName;
+
+        if (!source->getProductName(productId, productName)) {
+            cout << "Product not found in source warehouse.\n";
+            return false;
+        }
+
+        if (source->productQuantity(productId) < quantity) {
+            cout << "Insufficient stock in source warehouse.\n";
+            return false;
+        }
+
+        if (!destination->canStoreProduct(productId, productName, quantity)) {
+            cout << "Destination warehouse has insufficient capacity "
+                 << "or a product-name mismatch.\n";
+            return false;
+        }
+
+        // Remove stock from source.
+        if (!source->removeProduct(productId, quantity)) {
+            cout << "Stock removal failed.\n";
+            return false;
+        }
+
+        // Add stock to destination.
+        if (!destination->receiveProduct(productId, productName, quantity)) {
+            // Restore source stock if destination insertion fails.
+            source->receiveProduct(productId, productName, quantity);
+
+            cout << "Transfer failed. Source stock restored.\n";
+            return false;
+        }
+
+        cout << "\nStock transferred successfully!\n";
+        cout << "Product: " << productName << '\n';
+        cout << "Quantity transferred: " << quantity << '\n';
+        cout << "Source warehouse: " << sourceId << '\n';
+        cout << "Destination warehouse: " << destinationId << '\n';
+
+        return true;
+    }
     void displayWarehouses() const {
         if (!root) {
             cout << "No warehouses have been added.\n";
@@ -494,6 +569,7 @@ int main() {
              << "4. Store product in warehouse\n"
              << "5. Update warehouse capacity\n"
              << "6. Search product in warehouse\n"
+             << "7. Transfer product between warehouses\n"
              << "0. Exit\n";
         if (!warehouseReadInteger("Choice: ", choice)) {
             if (cin.eof()) break;
@@ -564,6 +640,32 @@ int main() {
                 continue;
 
             warehouse->searchStoredProduct(productId);
+        } else if (choice == 7) {
+            int sourceId;
+            int destinationId;
+            int productId;
+            int quantity;
+
+            cout << "\n--- Warehouse Stock Transfer ---\n";
+
+            if (!warehouseReadInteger("Source Warehouse ID: ", sourceId))
+                continue;
+
+            if (!warehouseReadInteger("Destination Warehouse ID: ", destinationId))
+                continue;
+
+            if (!warehouseReadInteger("Product ID: ", productId))
+                continue;
+
+            if (!warehouseReadInteger("Quantity to transfer: ", quantity))
+                continue;
+
+            manager.transferProduct(
+                sourceId,
+                destinationId,
+                productId,
+                quantity
+            );
         } else if (choice == 0) {
             cout << "Warehouse Manager closed. Changes are only in memory.\n";
         } else {
