@@ -74,6 +74,23 @@ public:
         }
         return 0;
     }
+    void searchStoredProduct(int productId) const {
+        StoredProduct* current = products;
+
+        while (current != nullptr) {
+            if (current->id == productId) {
+                cout << "\n--- Product Found ---\n";
+                cout << "Product ID: " << current->id << '\n';
+                cout << "Product Name: " << current->name << '\n';
+                cout << "Available Quantity: " << current->quantity << '\n';
+                return;
+            }
+
+            current = current->next;
+        }
+
+        cout << "Product not found in this warehouse.\n";
+    }
     size_t storedProductCount() const {
         size_t count = 0;
         for (StoredProduct* current = products; current; current = current->next) ++count;
@@ -408,6 +425,7 @@ int main() {
              << "2. Delete warehouse\n"
              << "3. Display all warehouses\n"
              << "4. Store product in warehouse\n"
+             << "6. Search product in warehouse\n"
              << "0. Exit\n";
         if (!warehouseReadInteger("Choice: ", choice)) {
             if (cin.eof()) break;
@@ -460,6 +478,24 @@ int main() {
             } else {
                 warehouse->addProduct(productId, productName, quantity);
             }
+        } else if (choice == 6) {
+            int warehouseId;
+            int productId;
+
+            if (!warehouseReadInteger("Enter Warehouse ID: ", warehouseId))
+                continue;
+
+            Warehouse* warehouse = manager.searchWarehouse(warehouseId);
+
+            if (warehouse == nullptr) {
+                cout << "Warehouse not found.\n";
+                continue;
+            }
+
+            if (!warehouseReadInteger("Enter Product ID: ", productId))
+                continue;
+
+            warehouse->searchStoredProduct(productId);
         } else if (choice == 0) {
             cout << "Warehouse Manager closed. Changes are only in memory.\n";
         } else {
