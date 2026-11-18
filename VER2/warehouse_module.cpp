@@ -463,17 +463,22 @@ int main() {
             }
         } else if (choice == 5) {
             int warehouseId;
-            int capacity;
-            if (!warehouseReadInteger("Warehouse ID: ", warehouseId) ||
-                !warehouseReadInteger("New capacity (units): ", capacity)) {
+            int newCapacity;
+
+            if (!warehouseReadInteger("Enter Warehouse ID: ", warehouseId))
                 continue;
-            }
+
             Warehouse* warehouse = manager.searchWarehouse(warehouseId);
+
             if (!warehouse) {
                 cout << "Warehouse not found.\n";
-            } else {
-                warehouse->setCapacity(capacity);
+                continue;
             }
+
+            if (!warehouseReadInteger("Enter new capacity: ", newCapacity))
+                continue;
+
+            warehouse->setCapacity(newCapacity);
         } else if (choice == 0) {
             cout << "Warehouse Manager closed. Changes are only in memory.\n";
         } else {
