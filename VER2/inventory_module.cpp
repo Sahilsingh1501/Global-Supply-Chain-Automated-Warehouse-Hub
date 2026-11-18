@@ -1,4 +1,5 @@
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <sstream>
@@ -210,6 +211,61 @@ public:
         if (!found) {
             cout << "No products have been added yet.\n";
         }
+    }
+    // Feature 1: Low Stock Alert System
+    void displayLowStockProducts(int threshold) const {
+        if (threshold < 0) {
+            cout << "Threshold cannot be negative.\n";
+            return;
+        }
+
+        bool found = false;
+
+        cout << "\n========== LOW STOCK ALERTS ==========\n";
+
+        for (int i = 0; i < TABLE_SIZE; i++) {
+            for (ProductNode* current = buckets[i];
+                 current != nullptr;
+                 current = current->next) {
+
+                if (current->product.getQuantity() <= threshold) {
+                    cout << current->product << '\n';
+                    found = true;
+                }
+            }
+        }
+
+        if (!found) {
+            cout << "All products have sufficient stock.\n";
+        }
+
+        cout << "======================================\n";
+    }
+
+    // Feature 2: Inventory Summary Report
+    void displayInventorySummary() const {
+        int totalProducts = 0;
+        long long totalUnits = 0;
+        double totalValue = 0;
+
+        for (int i = 0; i < TABLE_SIZE; i++) {
+            for (ProductNode* current = buckets[i];
+                 current != nullptr;
+                 current = current->next) {
+
+                const Product& p = current->product;
+
+                totalProducts++;
+                totalUnits += p.getQuantity();
+                totalValue += p.getPrice() * p.getQuantity();
+            }
+        }
+
+        cout << "\n========== INVENTORY SUMMARY ==========\n";
+        cout << "Total Products       : " << totalProducts << '\n';
+        cout << "Total Units          : " << totalUnits << '\n';
+        cout << "Total Inventory Value: $" << totalValue << '\n';
+        cout << "=======================================\n";
     }
 };
 bool readInteger(const string& prompt, int& value) {
