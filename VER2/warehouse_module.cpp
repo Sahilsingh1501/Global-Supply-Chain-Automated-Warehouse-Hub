@@ -57,6 +57,24 @@ public:
         capacity = value;
         return true;
     }
+    bool isFull() const {
+        return usedCapacity >= capacity;
+    }
+    bool isNearlyFull() const {
+        return getUtilization() >= 90.0;
+    }
+    bool hasProduct(int productId) const {
+        for (StoredProduct* p = products; p; p = p->next)
+            if (p->id == productId)
+                return true;
+        return false;
+    }
+    int getProductCount() const {
+        int count = 0;
+        for (StoredProduct* p = products; p; p = p->next)
+            count++;
+        return count;
+    }
     void setName(const string& value) { name = value; }
     void setLocation(const string& value) { location = value; }
     bool isEmpty() const { return products == nullptr; }
