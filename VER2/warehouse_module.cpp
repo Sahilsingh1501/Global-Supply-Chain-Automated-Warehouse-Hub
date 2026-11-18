@@ -75,6 +75,13 @@ public:
             count++;
         return count;
     }
+    int getHighestStock() const {
+        int highest = 0;
+        for (StoredProduct* p = products; p; p = p->next)
+            if (p->quantity > highest)
+                highest = p->quantity;
+        return highest;
+    }
     void setName(const string& value) { name = value; }
     void setLocation(const string& value) { location = value; }
     bool isEmpty() const { return products == nullptr; }
@@ -141,14 +148,15 @@ public:
     }
 
     bool canStoreProduct(int productId, const string& productName, int quantity) const {
+        if (productId <= 0 || productName.empty() || quantity <= 0) return false;
         for (StoredProduct* current = products; current; current = current->next) {
             if (current->id == productId && current->name != productName) return false;
         }
-        return quantity > 0 && quantity <= capacity - usedCapacity;
+        return quantity <= capacity - usedCapacity;
     }
 
     bool receiveProduct(int productId, const string& productName, int quantity) {
-        if (quantity <= 0) return false;
+        if (productId <= 0 || productName.empty() || quantity <= 0) return false;
         for (StoredProduct* current = products; current; current = current->next) {
             if (current->id == productId) {
                 if (current->name != productName) {
@@ -222,10 +230,10 @@ public:
              << " | Location: " << location
              << " | Capacity: " << usedCapacity << " / " << capacity
              << " units used\n";
-        cout << "Available Capacity: "
-             << capacity - usedCapacity << " units\n";
-        cout << "Capacity Utilization: "
-             << getCapacityUtilization() << "%\n";
+        cout << "Available Space: " << getAvailableCapacity() << '\n';
+        cout << "Utilization: " << getUtilization() << "%\n";
+        if (isNearlyFull())
+            cout << "Warning: Warehouse is almost full!\n";
         cout << "  Products:\n";
         if (!products) {
             cout << "    (none)\n";
@@ -322,6 +330,30 @@ private:
                storedProductQuantity(node->left, productId) +
                storedProductQuantity(node->right, productId);
     }
+    int countEmpty(WarehouseNode* node) const {
+        if (!node) return 0;
+        return (node->warehouse.isEmpty() ? 1 : 0)
+             + countEmpty(node->left)
+             + countEmpty(node->right);
+    }
+    int countAvailable(WarehouseNode* node) const {
+        if (!node) return 0;
+        return (!node->warehouse.isFull() ? 1 : 0)
+             + countAvailable(node->left)
+             + countAvailable(node->right);
+    }
+    int totalCapacity(WarehouseNode* node) const {
+        if (!node) return 0;
+        return node->warehouse.getCapacity()
+             + totalCapacity(node->left)
+             + totalCapacity(node->right);
+    }
+    int totalUsedCapacity(WarehouseNode* node) const {
+        if (!node) return 0;
+        return node->warehouse.getUsedCapacity()
+             + totalUsedCapacity(node->left)
+             + totalUsedCapacity(node->right);
+    }
     size_t warehouseCount(WarehouseNode* node) const {
         return node ? 1 + warehouseCount(node->left) + warehouseCount(node->right) : 0;
     }
@@ -352,7 +384,14 @@ public:
         root = insert(root, id, name, location, capacity, added);
         return added;
     }
+    bool warehouseExists(int id) const {
+        return findNode(id) != nullptr;
+    }
     size_t warehouseCount() const { return warehouseCount(root); }
+    int countEmpty() const { return countEmpty(root); }
+    int countAvailable() const { return countAvailable(root); }
+    int totalCapacity() const { return totalCapacity(root); }
+    int totalUsedCapacity() const { return totalUsedCapacity(root); }
     template <typename Callback>
     void forEachWarehouse(Callback callback) const {
         forEachWarehouseInOrder(root, callback);
