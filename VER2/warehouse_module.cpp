@@ -41,7 +41,18 @@ public:
     const string& getLocation() const { return location; }
     int getCapacity() const { return capacity; }
     int getUsedCapacity() const { return usedCapacity; }
-    void setCapacity(int value) { capacity = value; }
+   bool setCapacity(int value) {
+    if (value <= 0 || value < usedCapacity) {
+        cout << "Invalid capacity! New capacity cannot be less "
+             << "than the currently stored quantity.\n";
+        return false;
+    }
+
+    capacity = value;
+
+    cout << "Warehouse capacity updated successfully.\n";
+    return true;
+}
     void setName(const string& value) { name = value; }
     void setLocation(const string& value) { location = value; }
     bool isEmpty() const { return products == nullptr; }
