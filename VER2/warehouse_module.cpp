@@ -425,6 +425,7 @@ int main() {
              << "2. Delete warehouse\n"
              << "3. Display all warehouses\n"
              << "4. Store product in warehouse\n"
+             << "5. Update warehouse capacity\n"
              << "6. Search product in warehouse\n"
              << "0. Exit\n";
         if (!warehouseReadInteger("Choice: ", choice)) {
