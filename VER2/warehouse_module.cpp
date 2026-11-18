@@ -41,6 +41,12 @@ public:
     const string& getLocation() const { return location; }
     int getCapacity() const { return capacity; }
     int getUsedCapacity() const { return usedCapacity; }
+    double getCapacityUtilization() const {
+        if (capacity <= 0)
+            return 0.0;
+
+        return (static_cast<double>(usedCapacity) / capacity) * 100.0;
+    }
     void setCapacity(int value) { capacity = value; }
     void setName(const string& value) { name = value; }
     void setLocation(const string& value) { location = value; }
@@ -172,6 +178,10 @@ public:
              << " | Location: " << location
              << " | Capacity: " << usedCapacity << " / " << capacity
              << " units used\n";
+        cout << "Available Capacity: "
+             << capacity - usedCapacity << " units\n";
+        cout << "Capacity Utilization: "
+             << getCapacityUtilization() << "%\n";
         cout << "  Products:\n";
         if (!products) {
             cout << "    (none)\n";
