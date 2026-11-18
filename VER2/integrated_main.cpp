@@ -7,6 +7,127 @@
 #include "supply_chain_module.cpp"
 #include "person_d_persistence.h"
 
+#include <ctime>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Person D — Feature 1: Audit Log
+// Appends a timestamped operation record to audit.log every time the user
+// makes a change.  Uses ofstream in append mode (ios::app) so previous
+// entries are never overwritten.
+// ─────────────────────────────────────────────────────────────────────────────
+static const std::string AUDIT_LOG_FILE = "audit.log";
+
+static std::string currentTimestamp() {
+    std::time_t now = std::time(nullptr);
+    char buf[32];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+    return std::string(buf);
+}
+
+void writeAuditLog(const std::string& operation, const std::string& details) {
+    std::ofstream log(AUDIT_LOG_FILE.c_str(), std::ios::app);
+    if (log)
+        log << currentTimestamp() << " | " << operation << " | " << details << "\n";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Person D — Feature 2: Report Generator
+// Writes a formatted summary report (inventory overview + low-stock alerts +
+// warehouse utilisation) to report.txt using ofstream.
+// ─────────────────────────────────────────────────────────────────────────────
+static const std::string REPORT_FILE = "report.txt";
+static const int LOW_STOCK_THRESHOLD = 10;
+
+void generateReport(const InventoryManager& inventory,
+                    const WarehouseManager& warehouses) {
+    std::ofstream report(REPORT_FILE.c_str(), std::ios::out | std::ios::trunc);
+    if (!report) {
+        std::cout << "Could not write report to " << REPORT_FILE << ".\n";
+        return;
+    }
+
+    std::string ts = currentTimestamp();
+
+    // ── Header ───────────────────────────────────────────────────────────────
+    report << "============================================================\n"
+           << "  Global Supply Chain & Warehouse System — Summary Report\n"
+           << "  Generated: " << ts << "\n"
+           << "============================================================\n\n";
+
+    // ── Section 1: Inventory overview ────────────────────────────────────────
+    int    totalProducts = 0;
+    long long totalUnits = 0;
+    double totalValue    = 0.0;
+
+    std::ostringstream lowStockSection;
+    int lowStockCount = 0;
+
+    inventory.forEachProduct([&](const Product& p) {
+        ++totalProducts;
+        totalUnits += p.getQuantity();
+        totalValue += p.getPrice() * p.getQuantity();
+
+        if (p.getQuantity() <= LOW_STOCK_THRESHOLD) {
+            ++lowStockCount;
+            lowStockSection << "  [!] ID=" << p.getId()
+                            << "  " << p.getName()
+                            << "  qty=" << p.getQuantity()
+                            << "  price=$" << std::fixed << std::setprecision(2)
+                            << p.getPrice() << "\n";
+        }
+    });
+
+    report << "INVENTORY SUMMARY\n"
+           << "-----------------\n"
+           << "  Total distinct products : " << totalProducts << "\n"
+           << "  Total units in stock    : " << totalUnits    << "\n"
+           << "  Total inventory value   : $"
+           << std::fixed << std::setprecision(2) << totalValue << "\n\n";
+
+    // ── Section 2: Low-stock alerts ──────────────────────────────────────────
+    report << "LOW-STOCK ALERTS  (threshold <= " << LOW_STOCK_THRESHOLD << " units)\n"
+           << "--------------------------------------------------------------\n";
+    if (lowStockCount == 0)
+        report << "  All products have sufficient stock.\n";
+    else
+        report << lowStockSection.str();
+    report << "\n";
+
+    // ── Section 3: Warehouse utilisation ────────────────────────────────────
+    report << "WAREHOUSE UTILISATION\n"
+           << "---------------------\n";
+
+    bool anyWarehouse = false;
+    warehouses.forEachWarehouse([&](const Warehouse& w) {
+        anyWarehouse = true;
+        double util = w.getCapacityUtilization();
+        std::string status = (util >= 90.0) ? "NEAR FULL"
+                           : (util <= 0.0)  ? "EMPTY"
+                                            : "OK";
+        report << "  Warehouse #" << w.getId()
+               << "  \"" << w.getName() << "\""
+               << "  [" << w.getLocation() << "]"
+               << "  " << w.getUsedCapacity() << "/" << w.getCapacity()
+               << " units  (" << std::fixed << std::setprecision(1) << util << "%)"
+               << "  " << status << "\n";
+    });
+    if (!anyWarehouse)
+        report << "  No warehouses have been added yet.\n";
+
+    report << "\n============================================================\n"
+           << "  End of report\n"
+           << "============================================================\n";
+
+    report.close();
+    std::cout << "Report written to " << REPORT_FILE
+              << " at " << ts << ".\n";
+
+    writeAuditLog("REPORT_GENERATED", REPORT_FILE + " written at " + ts);
+}
+
 void saveChanges(const SystemPersistence& persistence, const InventoryManager& inventory,
                  const WarehouseManager& warehouses,
                  const SupplyChainManager& supplyChain) {
@@ -15,6 +136,7 @@ void saveChanges(const SystemPersistence& persistence, const InventoryManager& i
         cout << "Could not save changes: " << error
              << "\nThe changes are still in memory, but may be lost when the app closes.\n";
 }
+
 
 bool allocatedStockIsValid(const InventoryManager& inventory,
                            const WarehouseManager& warehouses,
@@ -55,6 +177,9 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
             } else if (inventory.addProduct(product)) {
                 cout << "Product added successfully.\n";
+                writeAuditLog("PRODUCT_ADDED", "ID=" + to_string(product.getId()) +
+                              " name=" + product.getName() +
+                              " qty=" + to_string(product.getQuantity()));
                 saveChanges(persistence, inventory, warehouses, supplyChain);
             } else {
                 cout << "A product with that ID already exists.\n";
@@ -66,6 +191,7 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                 cout << "This product is stored or in an active shipment, so it can't be deleted.\n";
             } else if (inventory.deleteProduct(id)) {
                 cout << "Product deleted successfully.\n";
+                writeAuditLog("PRODUCT_DELETED", "ID=" + to_string(id));
                 saveChanges(persistence, inventory, warehouses, supplyChain);
             } else {
                 cout << "Product not found.\n";
@@ -88,6 +214,8 @@ void runInventoryManager(InventoryManager& inventory, const WarehouseManager& wa
                 } else {
                     product->setQuantity(quantity);
                     cout << "Stock updated successfully.\n";
+                    writeAuditLog("STOCK_UPDATED", "ID=" + to_string(id) +
+                                  " new_qty=" + to_string(quantity));
                     saveChanges(persistence, inventory, warehouses, supplyChain);
                 }
             }
@@ -130,6 +258,8 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                 cout << "A warehouse with that ID already exists.\n";
             } else {
                 cout << "Warehouse added successfully.\n";
+                writeAuditLog("WAREHOUSE_ADDED", "ID=" + to_string(id) +
+                              " name=" + name + " cap=" + to_string(capacity));
                 saveChanges(persistence, inventory, warehouses, supplyChain);
             }
         } else if (choice == 2) {
@@ -139,6 +269,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
                 cout << "Remove its routes and complete its active shipments before deleting it.\n";
             } else if (warehouses.deleteWarehouse(id)) {
                 cout << "Warehouse deleted successfully.\n";
+                writeAuditLog("WAREHOUSE_DELETED", "ID=" + to_string(id));
                 saveChanges(persistence, inventory, warehouses, supplyChain);
             }
         } else if (choice == 3) {
@@ -170,8 +301,12 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
             } else {
                 int previousQuantity = warehouse->productQuantity(productId);
                 warehouse->addProduct(productId, product->getName(), quantity);
-                if (warehouse->productQuantity(productId) == previousQuantity + quantity)
+                if (warehouse->productQuantity(productId) == previousQuantity + quantity) {
+                    writeAuditLog("STOCK_STORED", "warehouse=" + to_string(warehouseId) +
+                                  " product=" + to_string(productId) +
+                                  " qty=" + to_string(quantity));
                     saveChanges(persistence, inventory, warehouses, supplyChain);
+                }
             }
         } else if (choice != 0) {
             cout << "Please choose one of the listed options.\n";
@@ -199,8 +334,11 @@ void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManag
             int toId;
             if (!readInteger("Origin warehouse ID: ", fromId) ||
                 !readInteger("Destination warehouse ID: ", toId)) continue;
-            if (supplyChain.addRoute(fromId, toId))
+            if (supplyChain.addRoute(fromId, toId)) {
+                writeAuditLog("ROUTE_ADDED", "from=" + to_string(fromId) +
+                              " to=" + to_string(toId));
                 saveChanges(persistence, inventory, warehouses, supplyChain);
+            }
         } else if (choice == 2) {
             supplyChain.displayRoutes();
         } else if (choice == 3) {
@@ -212,8 +350,13 @@ void runSupplyChainManager(SupplyChainManager& supplyChain, const InventoryManag
                 !readInteger("Destination warehouse ID: ", destinationId) ||
                 !readInteger("Product ID: ", productId) ||
                 !readInteger("Shipment quantity: ", quantity)) continue;
-            if (supplyChain.createShipment(originId, destinationId, productId, quantity))
+            if (supplyChain.createShipment(originId, destinationId, productId, quantity)) {
+                writeAuditLog("SHIPMENT_CREATED", "from=" + to_string(originId) +
+                              " to=" + to_string(destinationId) +
+                              " product=" + to_string(productId) +
+                              " qty=" + to_string(quantity));
                 saveChanges(persistence, inventory, warehouses, supplyChain);
+            }
         } else if (choice != 0) {
             cout << "Please choose one of the listed options.\n";
         }
@@ -234,6 +377,7 @@ int runSystem() {
         cerr << "Startup error: saved inventory stock is less than the amount stored or in transit.\n";
         return 1;
     }
+    writeAuditLog("SYSTEM_STARTED", "Application started");
     int choice = -1;
 
     while (choice != 0) {
@@ -244,6 +388,7 @@ int runSystem() {
              << "2. Warehouse Manager\n"
              << "3. Supply Chain Manager\n"
              << "4. Display inventory and warehouses\n"
+             << "5. Generate summary report\n"
              << "0. Save & exit\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) break;
@@ -260,11 +405,15 @@ int runSystem() {
             warehouses.displayWarehouses();
             supplyChain.displayRoutes();
             supplyChain.displayShipments();
+        } else if (choice == 5) {
+            generateReport(inventory, warehouses);
         } else if (choice == 0) {
-            if (persistence.save(inventory, warehouses, supplyChain, error))
+            if (persistence.save(inventory, warehouses, supplyChain, error)) {
+                writeAuditLog("SYSTEM_SHUTDOWN", "Data saved successfully");
                 cout << "Data saved. Goodbye.\n";
-            else
+            } else {
                 cerr << "Save error: " << error << '\n';
+            }
         } else {
             cout << "Please choose one of the listed options.\n";
         }
