@@ -110,6 +110,7 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
              << "3. Display all warehouses\n"
              << "4. Store an inventory product in warehouse\n"
              << "5. Update warehouse capacity\n"
+             << "6. Search product in warehouse\n"
              << "0. Return to main menu\n";
         if (!readInteger("Choice: ", choice)) {
             if (cin.eof()) return;
@@ -185,6 +186,24 @@ void runWarehouseManager(WarehouseManager& warehouses, InventoryManager& invento
             } else if (warehouse->setCapacity(capacity)) {
                 saveChanges(persistence, inventory, warehouses, supplyChain);
             }
+        } else if (choice == 6) {
+            int warehouseId;
+            int productId;
+
+            if (!readInteger("Enter Warehouse ID: ", warehouseId))
+                continue;
+
+            Warehouse* warehouse = warehouses.searchWarehouse(warehouseId);
+
+            if (warehouse == nullptr) {
+                cout << "Warehouse not found.\n";
+                continue;
+            }
+
+            if (!readInteger("Enter Product ID: ", productId))
+                continue;
+
+            warehouse->searchStoredProduct(productId);
         } else if (choice != 0) {
             cout << "Please choose one of the listed options.\n";
         }
